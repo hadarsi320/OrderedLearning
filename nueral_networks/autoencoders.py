@@ -31,7 +31,7 @@ class Autoencoder(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        if self.apply_nested_dropout and self.training is True:
+        if self.apply_nested_dropout and self.training is True and not self.converged:
             x = nested_dropout(x, self.conv_i)
             self.last_repr = x
         return self.decoder(x)
@@ -40,7 +40,7 @@ class Autoencoder(nn.Module):
         return self.encoder(x)
 
     def check_convergence(self, x):
-        if self.conv_i < self.repr_dim:
+        if not self.converged:
             repr = self.get_repr(x)
             diff = torch.norm(self.last_repr[:, self.conv_i] - repr[:, self.conv_i]) / repr.shape[0]
             if diff <= self.eps:
