@@ -55,6 +55,3 @@ class Autoencoder(nn.Module):
                     self.conv_i += 1
                     self.conv_succession = 0
 
-
-if __name__ == '__main__':
-    pass

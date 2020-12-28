@@ -3,13 +3,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
 
-import data
-import neural_networks
-import utils
+from utils_package import data
+from nueral_networks import autoencoders
+import utils_package
 
 
 def flatten(x: torch.Tensor):
@@ -17,7 +14,7 @@ def flatten(x: torch.Tensor):
 
 
 def plot_representation_variance(autoencoder, trainset):
-    reps = utils.get_data_representation(autoencoder, trainset)
+    reps = utils_package.get_data_representation(autoencoder, trainset)
 
     reps_variance = torch.var(reps, dim=0)
     plt.plot(reps_variance)
@@ -51,7 +48,7 @@ def fit_autoencoder(autoencoder, trainset, train_loader, learning_rate, epochs, 
         print(f'\tTotal epoch loss {epoch_loss:.3f}\n')
 
         if (epoch + 1) % 5 == 0 or epoch == 0:
-            reps = utils.get_data_representation(autoencoder, trainset)
+            reps = utils_package.get_data_representation(autoencoder, trainset)
             reps_variance = torch.var(reps, dim=0)
             plt.title(f'Representation variance- epoch {epoch + 1}')
             plt.plot(reps_variance)
@@ -73,7 +70,7 @@ def main():
     batch_size = 1000
 
     trainset, train_loader = data.load_cifar10(batch_size)
-    autoencoder = neural_networks.Autoencoder(3072, 100, apply_nested_dropout=True)
+    autoencoder = autoencoders.Autoencoder(3072, 100, apply_nested_dropout=True)
     fit_autoencoder(autoencoder, trainset, train_loader, learning_rate, epochs, batch_size)
     torch.save(autoencoder, 'pickles/nested_dropout_autoencoder.pkl')
 
