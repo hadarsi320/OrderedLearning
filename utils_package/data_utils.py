@@ -3,7 +3,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 
-def load_cifar10(batch_size):
+def load_cifar10(batch_size=100):
     mean = [0.49139968, 0.48215841, 0.44653091]
     std = [0.24703223, 0.24348513, 0.26158784]
     transform = transforms.Compose([transforms.ToTensor(),
@@ -13,3 +13,11 @@ def load_cifar10(batch_size):
                                                  transform=transform, train=True)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     return train_dataset, train_loader
+
+
+if __name__ == '__main__':
+    transform = transforms.Compose([transforms.ToTensor()])
+    train_dataset = torchvision.datasets.CIFAR10(root='../data/', download=True,
+                                                 transform=transform, train=True)
+    for sample in train_dataset:
+        break
