@@ -76,14 +76,15 @@ def fit_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name
 
 
 def main():
-    epochs = 1
+    epochs = 20
     learning_rate = 0.001
     batch_size = 1000
+    rep_dim = 100
 
-    model_name = 'nested_dropout_autoencoder_' + datetime.now().strftime('%H_%M_%S')
+    model_name = 'nested_dropout_autoencoder_deep_relu_' + datetime.now().strftime('%H_%M_%S')
 
     train_dataset, train_loader = data_utils.load_cifar10(batch_size)
-    autoencoder = autoencoders.Autoencoder(3072, 100, apply_nested_dropout=True)
+    autoencoder = autoencoders.Autoencoder(3072, rep_dim, apply_nested_dropout=True, activation='ReLU', deep=True)
     losses = fit_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name)
     torch.save(autoencoder, f'models/{model_name}.pkl')
 

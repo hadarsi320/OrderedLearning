@@ -6,7 +6,8 @@ from utils_package import nn_utils
 
 
 class Autoencoder(nn.Module):
-    def __init__(self, input_dim, representation_dim, apply_nested_dropout=False, eps=1e-2, deep=False, activation=None):
+    def __init__(self, input_dim, representation_dim,
+                 apply_nested_dropout=False, eps=1e-2, deep=False, activation=None):
         super(Autoencoder, self).__init__()
         self.conv_i = 0
         self.converged = False
