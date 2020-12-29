@@ -2,9 +2,11 @@ import torch
 import torch.nn as nn
 from torch.distributions import Geometric
 
+from utils_package import nn_utils
+
 
 class Autoencoder(nn.Module):
-    def __init__(self, input_dim, representation_dim, apply_nested_dropout=False, eps=1e-2):
+    def __init__(self, input_dim, representation_dim, apply_nested_dropout=False, eps=1e-2, deep=False, activation=None):
         super(Autoencoder, self).__init__()
         self.conv_i = 0
         self.converged = False
@@ -15,8 +17,13 @@ class Autoencoder(nn.Module):
 
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-        self.encoder = nn.Linear(input_dim, representation_dim).to(self.device)
-        self.decoder = nn.Linear(representation_dim, input_dim).to(self.device)
+        if deep:
+            self.encoder = nn_utils.create_sequential(input_dim, representation_dim, activation=activation)
+            self.decoder = nn_utils.create_sequential(representation_dim, input_dim, activation=activation)
+        else:
+            self.encoder = nn.Linear(input_dim, representation_dim).to(self.device)
+            self.decoder = nn.Linear(representation_dim, input_dim).to(self.device)
+
         self.apply_nested_dropout = apply_nested_dropout
 
     def forward(self, x):
