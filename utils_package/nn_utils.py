@@ -21,6 +21,8 @@ def create_sequential(start_dim: int, end_dim: int, activation: str = None):
     layers = []
     last_dim = start_dim
     for dim in dimensions:
+        if dim in [start_dim, end_dim]:
+            continue
         layers.append(nn.Linear(last_dim, dim))
         if activation is not None:
             layers.append(getattr(nn, activation)())
