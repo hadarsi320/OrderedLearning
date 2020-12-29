@@ -8,13 +8,16 @@ class BinaryTree:
     For node in depth i, its right son contains a subset of its items that have 1 in the i+1-th cell
     """
 
-    def __init__(self, data: torch.Tensor):
+    def __init__(self, data: torch.Tensor, tree_depth=None):
         assert all(item in [0, 1] for row in data for item in row)
         self._data = data
-        self._tree_depth = data.shape[1]
+        if tree_depth is not None and tree_depth <= data.shape[1]:
+            self._tree_depth = tree_depth
+        else:
+            self._tree_depth = data.shape[1]
         self._root = self.generate_tree()
 
-    def generate_tree(self, ):
+    def generate_tree(self):
         initial_mask = torch.ones(self._data.shape[0], dtype=torch.bool)
         root = self.generate_node(initial_mask, -1, None)
         return root
