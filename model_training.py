@@ -58,12 +58,12 @@ def fit_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name
 
         if (epoch + 1) % 5 == 0 or epoch == 0:
             torch.save(autoencoder, f'checkpoints/{model_name}_epoch_{epoch+1}.pkl')
-            # reps = utils.get_data_representation(autoencoder, train_dataset)
-            # reps_variance = torch.var(reps, dim=0)
-            # plt.title(f'Representation variance- epoch {epoch + 1}')
-            # plt.plot(reps_variance.cpu())
-            # plt.savefig(f'plots/{model_name}_{epoch + 1}.png')
-            # plt.show()
+            reps = utils.get_data_representation(autoencoder, train_loader)
+            reps_variance = torch.var(reps, dim=0)
+            plt.title(f'Representation variance- epoch {epoch + 1}')
+            plt.plot(reps_variance.cpu())
+            plt.savefig(f'plots/{model_name}_{epoch + 1}.png')
+            plt.show()
 
         if autoencoder.converged is True:
             print('\t\tThe autoencoder converged prematurely')
@@ -79,12 +79,13 @@ def main():
     epochs = 20
     learning_rate = 0.001
     batch_size = 1000
-    rep_dim = 100
+    rep_dim = 1024
 
-    model_name = 'nested_dropout_autoencoder_deep_relu_' + datetime.now().strftime('%H_%M_%S')
+    model_name = 'nested_dropout_autoencoder_deep_relu_1024_' + datetime.now().strftime('%H_%M_%S')
 
     train_dataset, train_loader = data_utils.load_cifar10(batch_size)
     autoencoder = autoencoders.Autoencoder(3072, rep_dim, apply_nested_dropout=True, activation='ReLU', deep=True)
+    print('The number of the model\'s parameters:', sum(p.numel() for p in autoencoder.parameters()))
     losses = fit_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name)
     torch.save(autoencoder, f'models/{model_name}.pkl')
 
