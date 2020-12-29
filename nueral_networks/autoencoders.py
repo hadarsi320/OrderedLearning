@@ -45,8 +45,8 @@ class Autoencoder(nn.Module):
 
     def check_convergence(self, x):
         if not self.converged:
-            repr = self.get_representation(x)
-            diff = torch.norm(self.last_repr[:, self.conv_i] - repr[:, self.conv_i]) / repr.shape[0]
+            x_repr = self.get_representation(x)
+            diff = torch.norm(self.last_repr[:, self.conv_i] - x_repr[:, self.conv_i]) / x_repr.shape[0]
             if diff <= self.eps:
                 self.conv_succession += 1
             else:
