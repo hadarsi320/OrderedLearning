@@ -1,5 +1,6 @@
 from math import log2, ceil, floor
 
+import torch
 import torch.nn as nn
 
 
@@ -30,3 +31,14 @@ def create_sequential(start_dim: int, end_dim: int, activation: str = None):
     layers.append(nn.Linear(last_dim, end_dim))
 
     return nn.Sequential(*layers)
+
+
+def nested_dropout(x: torch.Tensor, nested_dropout_dist, min_neuron: int):
+    batch_size = x.shape[0]
+    neurons = x.shape[1]
+
+    dropout_sample = nested_dropout_dist.sample((batch_size,)).type(torch.long)
+    dropout_sample[dropout_sample > (neurons - 1)] = neurons - 1
+
+    mask = (torch.arange(neurons) <= (dropout_sample.unsqueeze(1) + min_neuron)).to(x.device)
+    return mask * x
