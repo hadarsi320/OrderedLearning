@@ -3,8 +3,10 @@ from math import log2, ceil, floor
 import torch
 import torch.nn as nn
 
+from torch import linalg
 
-def create_sequential(start_dim: int, end_dim: int, activation: str = None):
+
+def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout=True, dropout_p=0.2):
     assert start_dim != end_dim
 
     dimensions = []
@@ -27,6 +29,8 @@ def create_sequential(start_dim: int, end_dim: int, activation: str = None):
         layers.append(nn.Linear(last_dim, dim))
         if activation is not None:
             layers.append(getattr(nn, activation)())
+        if dropout:
+            layers.append(nn.Dropout(p=dropout_p))
         last_dim = dim
     layers.append(nn.Linear(last_dim, end_dim))
 
@@ -42,3 +46,15 @@ def nested_dropout(x: torch.Tensor, nested_dropout_dist, min_neuron: int):
 
     mask = (torch.arange(neurons) <= (dropout_sample.unsqueeze(1) + min_neuron)).to(x.device)
     return mask * x
+
+
+def code_variance(autoencoder, batch, batch_repr=None):
+    if batch_repr is None:
+        batch_repr = autoencoder.get_representation(batch)
+
+    noise = torch.randn_like(batch)
+    noisy_batch = batch + noise
+    noisy_batch_repr = autoencoder.get_representation(noisy_batch)
+
+    code_variance = torch.sum(linalg.norm(noisy_batch_repr, dim=1) / linalg.norm(noise, dim=1)) / len(batch)
+    return code_variance
