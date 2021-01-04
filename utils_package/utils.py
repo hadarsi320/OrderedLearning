@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 def get_data_representation(autoencoder, dataloader, device):
     with torch.no_grad():
         reps = torch.stack(
-            [autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader]).view(-1,
-                                                                                                autoencoder.repr_dim)
+            [autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader])\
+            .view(-1, autoencoder.repr_dim)
     return reps
 
 
@@ -35,7 +35,7 @@ def plot_repr_var(autoencoder, train_loader, device,
         plt.title(kwargs.pop('title'))
 
     if 'savefig' in kwargs:
-        plt.title(kwargs.pop('savefig'))
+        plt.savefig(kwargs.pop('savefig'))
 
     if show:
         plt.show()
