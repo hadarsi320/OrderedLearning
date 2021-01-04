@@ -56,5 +56,5 @@ def code_variance(autoencoder, batch, batch_repr=None):
     noisy_batch = batch + noise
     noisy_batch_repr = autoencoder.get_representation(noisy_batch)
 
-    code_variance = torch.sum(linalg.norm(noisy_batch_repr, dim=1) / linalg.norm(noise, dim=1)) / len(batch)
+    code_variance = torch.sum(linalg.norm(noisy_batch_repr - batch_repr, dim=1) / linalg.norm(noise, dim=1)) / len(batch)
     return code_variance
