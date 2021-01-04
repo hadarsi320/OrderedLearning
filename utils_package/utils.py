@@ -1,10 +1,10 @@
 import torch
 
 
-def get_data_representation(autoencoder, dataloader):
+def get_data_representation(autoencoder, dataloader, device):
     with torch.no_grad():
         reps = torch.stack(
-            [autoencoder.get_representation(batch) for batch, _ in dataloader]).view(-1, autoencoder.repr_dim)
+            [autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader]).view(-1, autoencoder.repr_dim)
     return reps
 
 
