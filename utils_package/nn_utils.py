@@ -48,7 +48,7 @@ def nested_dropout(x: torch.Tensor, nested_dropout_dist, min_neuron: int):
     return mask * x
 
 
-def code_variance(autoencoder, batch, batch_repr=None):
+def estimate_code_variance(autoencoder, batch, batch_repr=None):
     if batch_repr is None:
         batch_repr = autoencoder.get_representation(batch)
 
@@ -56,5 +56,6 @@ def code_variance(autoencoder, batch, batch_repr=None):
     noisy_batch = batch + noise
     noisy_batch_repr = autoencoder.get_representation(noisy_batch)
 
-    code_variance = torch.sum(linalg.norm(noisy_batch_repr - batch_repr, dim=1) / linalg.norm(noise, dim=1)) / len(batch)
+    code_variance = torch.sum(
+        torch.pow(linalg.norm(noisy_batch_repr - batch_repr, dim=1) / linalg.norm(noise, dim=1), 2)) / len(batch)
     return code_variance
