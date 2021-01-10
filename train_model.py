@@ -1,3 +1,4 @@
+import itertools
 import os
 from datetime import datetime, timedelta
 from time import time
@@ -12,10 +13,13 @@ from nueral_networks.autoencoders import Autoencoder
 from utils_package import data_utils, utils, nn_utils
 
 
-def check_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Tensor, unit: int, succession: list, eps: float,
-                      bound: int) -> bool:
+def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Tensor, unit: int, succession: list,
+                           eps: float, bound: int) -> bool:
     new_repr = autoencoder.get_representation(batch)
-    if (linalg.norm(new_repr[:, unit] - old_repr[:, unit]) / len(batch)) <= eps:
+
+    # difference = linalg.norm((new_repr - old_repr)[:, unit]) / len(batch)
+    difference = linalg.norm((new_repr - old_repr)[:, :unit+1]) / (len(batch) * (unit+1))
+    if difference <= eps:
         succession[0] += 1
     else:
         succession[0] = 0
@@ -80,7 +84,7 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
             if (i + 1) % batch_print == 0:
                 print(f'Batch {i + 1} loss: {np.average(batch_losses[-batch_print:]):.3f}')
 
-            if check_convergence(autoencoder, batch, representation, converged_unit, succession, eps, bound):
+            if check_unit_convergence(autoencoder, batch, representation, converged_unit, succession, eps, bound):
                 converged_unit += 1
                 if converged_unit == autoencoder.repr_dim:
                     converged = True
@@ -94,11 +98,12 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
             kwargs = {}
             if save_plots:
                 kwargs['savefig'] = f'plots/{model_name}/epoch_{epoch + 1}.png'
-            utils.plot_repr_var(autoencoder, train_loader, device, show=show_plots,
-                                title=f'Representation variance- epoch {epoch + 1}',
-                                **kwargs)
+            if save_plots or show_plots:
+                utils.plot_repr_var(autoencoder, train_loader, device, show=show_plots,
+                                    title=f'Representation variance- epoch {epoch + 1}',
+                                    **kwargs)
             if save_models:
-                torch.save(autoencoder, f'checkpoints/{model_name}/epoch_{epoch + 1}.pkl')
+                torch.save(autoencoder, f'checkpoints/{model_name}/epoch_{epoch + 1}.pt')
 
         if converged is True:
             print('\t\tThe autoencoder has converged')
@@ -108,39 +113,51 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
     kwargs = {}
     if save_plots:
         kwargs['savefig'] = f'plots/{model_name}/final.png'
-    utils.plot_repr_var(autoencoder, train_loader, device,
-                        title='Final representation variance', show=show_plots, **kwargs)
+    if save_plots or show_plots:
+        utils.plot_repr_var(autoencoder, train_loader, device,
+                            title='Final representation variance', show=show_plots, **kwargs)
     if save_models:
-        torch.save(autoencoder, f'models/{model_name}.pkl')
+        torch.save(autoencoder, f'models/{model_name}.pt')
 
-    plt.clf()
-    plt.plot(losses)
-    plt.ylabel('Losses')
-    plt.xlabel('Epochs')
-    plt.savefig(f'plots/{model_name}/losses')
+    if save_plots or show_plots:
+        plt.clf()
+        plt.plot(losses)
+        plt.ylabel('Losses')
+        plt.xlabel('Epochs')
+        if save_plots:
+            plt.savefig(f'plots/{model_name}/losses')
+        if show_plots:
+            plt.show()
+
+    return converged_unit
+
+
+def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, activation='ReLU'):
+    deep_str = 'deep' if deep else 'shallow'
+    model_name = f'nestedDropoutAutoencoder_deep_{deep_str}_{activation}_' \
+                 + datetime.now().strftime('%y-%m-%d__%H-%M-%S')
+
+    train_dataset, train_loader = data_utils.load_cifar10(batch_size)
+    # print(f'Epochs: {epochs} Batch size {batch_size} Number of batches {len(train_loader)}\n\n')
+    autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
+    # print('The number of the model\'s parameters: {:,}'.format(sum(p.numel() for p in autoencoder.parameters())))
+    converged_units = fit_nested_dropout_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name,
+                                                     nested_dropout_p=0.03, bound=bound, epoch_print=2,
+                                                     save_models=True, save_plots=False, eps=eps, show_plots=False,
+                                                     corrupt_input=True, demand_code_invariance=True)
+    return converged_units
 
 
 def main():
-    epochs = 25
-    learning_rate = 0.001
-    batch_size = 1000
-    rep_dim = 512
-    activation = 'ReLU'
+    # epochs = [100]
+    # learning_rate = [1e-2, 1e-3]
+    # batch_size = [100, 1000]
+    # rep_dim = [512]
+    # deep = [True]
 
-    train_dataset, train_loader = data_utils.load_cifar10(batch_size)
+    # print(list(itertools.product(epochs, learning_rate, batch_size, rep_dim, activation, deep)))
 
-    # model_name = f'nestedDropoutAutoencoder_shallow_{rep_dim}_corrupt_code_inv'
-    # autoencoder = Autoencoder(3072, rep_dim, deep=False)
-    # fit_nested_dropout_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name, show_plots=True,
-    #                                corrupt_input=True, demand_code_invariance=True, save_models=False, save_plots=False)
-
-    model_name = f'nestedDropoutAutoencoder_deep_{rep_dim}_{activation}_' \
-                 + datetime.now().strftime('%y_%m_%d_%H_%M_%S')
-    autoencoder = Autoencoder(3072, rep_dim, deep=True, activation=activation)
-    print('The number of the model\'s parameters: {:,}'.format(sum(p.numel() for p in autoencoder.parameters())))
-    print(f'Epochs: {epochs} Batch size {batch_size} Number of batches {len(train_loader)}')
-    fit_nested_dropout_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name,
-                                   nested_dropout_p=0.03, bound=10, epoch_print=5, save_models=True, save_plots=True)
+    test_params(1000, 1e-3, 1e-2, 10, True, 512, 300)
 
 
 if __name__ == '__main__':
