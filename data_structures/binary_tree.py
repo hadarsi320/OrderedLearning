@@ -2,10 +2,12 @@ import math
 
 import torch
 
+from utils_package import math_utils
+
 
 class BinaryTreeNode:
     def __init__(self, data: torch.Tensor, depth, parent=None, left_son=None, right_son=None):
-        self.index = depth
+        self.depth = depth
         self.data = data
 
         self.parent = parent
@@ -29,48 +31,52 @@ class BinaryTree:
     For node in depth i, its right son contains a subset of its items that have 1 in the i+1-th cell
     """
 
-    def __init__(self, data: torch.Tensor, data_repr: torch.Tensor, tree_depth=float('inf')):
-        assert torch.all(torch.logical_or(torch.eq(data_repr, 0), torch.eq(data_repr, 1))) and \
-               data_repr.shape[0] == data.shape[0]
+    def __init__(self, data: torch.Tensor, code: torch.Tensor, tree_depth=float('inf')):
+        assert torch.all(torch.logical_or(torch.eq(code, 0), torch.eq(code, 1))) and \
+               code.shape[0] == data.shape[0]
 
         self.__data = data.cpu()
-        self.__data_repr = data_repr.cpu()
-        self._tree_depth = min(tree_depth, data_repr.shape[1])
+        self.__code = code.cpu()
+        self._tree_depth = min(tree_depth, code.shape[1])
 
         self._num_nodes = 0
         self._root = self._generate_tree()
 
     def _generate_tree(self):
-        initial_mask = torch.ones(self.__data_repr.shape[0], dtype=torch.bool)
-        root = self._generate_node(initial_mask, -1, None)
+        # initial_mask = torch.ones(self.__data_repr.shape[0], dtype=torch.bool)
+        root = self._generate_node(self.__data, self.__code, -1, None)
         return root
 
-    def _generate_node(self, mask: torch.Tensor, depth, parent):
+    def _generate_node(self, data: torch.Tensor, code: torch.Tensor, depth, parent):
         self._num_nodes += 1
-        if math.log2(self._num_nodes) == 0:
-            print(self._num_nodes)
-        node = BinaryTreeNode(mask, depth, parent)
+        if math_utils.is_power_of_2(self._num_nodes):
+            print(f'Creating node {self._num_nodes:,} out of {2**self._tree_depth:,}')
+
+        node = BinaryTreeNode(data, depth, parent)
         depth += 1
         if depth < self._tree_depth:
-            left_son_mask = torch.logical_and(self.__data_repr[:, depth] == 0, mask)
+            left_son_mask = code[:, depth] == 0
             if torch.any(left_son_mask):
-                node.left_son = self._generate_node(left_son_mask, depth, node)
+                node.left_son = self._generate_node(data[left_son_mask], code[left_son_mask], depth, node)
 
-            right_son_mask = torch.logical_and(self.__data_repr[:, depth] == 1, mask)
+            right_son_mask = code[:, depth] == 1
             if torch.any(right_son_mask):
-                node.right_son = self._generate_node(right_son_mask, depth, node)
+                node.right_son = self._generate_node(data[right_son_mask], code[right_son_mask], depth, node)
         return node
 
     def search_tree(self, item_repr: torch.Tensor, result_size: int = None, depth: int = None):
         node: BinaryTreeNode = self._root
         for i, unit in enumerate(item_repr.squeeze()):
-            if torch.sum(node.data) <= 1 or \
+            if len(node.data) <= 1 or \
                     (depth is not None and i == depth) or \
-                    (result_size is not None and torch.sum(node.data) <= result_size):
+                    (result_size is not None and len(node.data) <= result_size):
                 break
 
             if unit == 0:
                 node = node.left_son
             else:
                 node = node.right_son
-        return self.__data[node.data]
+        return node.data
+
+    def get_num_nodes(self):
+        return self._num_nodes
