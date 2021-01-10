@@ -1,7 +1,10 @@
+import pickle
+
 import torch
 from torchvision.transforms import ToPILImage
 
 from data_structures.binary_tree import BinaryTree
+from nueral_networks.autoencoders import Autoencoder
 from utils_package import data_utils, utils
 
 import matplotlib.pyplot as plt
@@ -10,18 +13,26 @@ import random
 
 
 def main():
-    mean = [0.49139968, 0.48215841, 0.44653091]
-    std = [0.24703223, 0.24348513, 0.26158784]
-    dataset, dataloader = data_utils.load_cifar10(100)
-    autoencoder = torch.load(open('models/nested_dropout_autoencoder_14_00_30.pkl', 'rb'),
-                             map_location=torch.device('cpu'))
-    autoencoder.device = torch.device('cpu')
+    depth = 25
+    bin_quantile = 0.2
+    model_pickle = f'models/nestedDropoutAutoencoder_deep_deep_ReLU_21-01-07__01-18-13.pkl'
 
-    representation = utils.get_data_representation(autoencoder, dataloader)
-    print('representations created')
-    binary_representations = utils.binarize_data(representation)
-    print('binary representations created')
-    binary_tree = BinaryTree(binary_representations, tree_depth=5)
+    dataset, dataloader = data_utils.load_cifar10(-1)
+    autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'))
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+    autoencoder.to(device)
+    autoencoder.eval()
+
+    data, _ = next(iter(dataloader))
+    print('data loaded')
+
+    representation = utils.get_data_representation(autoencoder, dataloader, device)
+    data_repr = utils.binarize_data(representation, bin_quantile)
+    print('data representation created')
+
+    binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
+    pickle.dump(binary_tree, open(f'binary_tree_{depth}', 'wb'))
     print('binary tree created')
 
     # random.seed(420)
