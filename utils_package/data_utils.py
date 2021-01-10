@@ -9,7 +9,10 @@ def load_cifar10(batch_size=1):
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize(mean, std),
                                     transforms.Lambda(lambda t: t.view(-1))])
-    train_dataset = torchvision.datasets.CIFAR10(root='data/', download=True,
-                                                 transform=transform, train=True)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    return train_dataset, train_loader
+    dataset = torchvision.datasets.CIFAR10(root='data/', download=True,
+                                           transform=transform, train=True)
+    if batch_size == -1:
+        dataloader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
+    else:
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    return dataset, dataloader
