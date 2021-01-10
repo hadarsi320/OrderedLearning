@@ -13,7 +13,7 @@ import random
 
 
 def main():
-    depth = 25
+    depth = 15
     bin_quantile = 0.2
     model_pickle = f'models/nestedDropoutAutoencoder_deep_deep_ReLU_21-01-07__01-18-13.pkl'
 
@@ -33,7 +33,7 @@ def main():
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
     pickle.dump(binary_tree, open(f'binary_tree_{depth}', 'wb'))
-    print('binary tree created')
+    print(f'Binary tree created, with {binary_tree.get_num_nodes()} nodes')
 
     # random.seed(420)
     # for sample, _ in dataset:
