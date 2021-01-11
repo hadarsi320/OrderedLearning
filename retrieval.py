@@ -12,28 +12,20 @@ import matplotlib.pyplot as plt
 import random
 
 
+def linear_scan(item, data, repr):
+    for i, _item in enumerate(repr):
+        if item == _item:
+            return data[i]
+    raise ValueError('item not in repr')
+
+
 def main():
-    depth = 15
-    bin_quantile = 0.2
-    model_pickle = f'models/nestedDropoutAutoencoder_deep_deep_ReLU_21-01-07__01-18-13.pkl'
-
-    dataset, dataloader = data_utils.load_cifar10(-1)
-    autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'))
+    model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
+    _, dataloader = data_utils.get_cifar10_dataloader(1000)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'), map_location=device)
 
-    autoencoder.to(device)
-    autoencoder.eval()
-
-    data, _ = next(iter(dataloader))
-    print('data loaded')
-
-    representation = utils.get_data_representation(autoencoder, dataloader, device)
-    data_repr = utils.binarize_data(representation, bin_quantile)
-    print('data representation created')
-
-    binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
-    pickle.dump(binary_tree, open(f'binary_tree_{depth}_newg', 'wb'))
-    print(f'Binary tree created, with {binary_tree.get_num_nodes()} nodes')
+    data_repr = torch.stack([autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader])
 
     # random.seed(420)
     # for sample, _ in dataset:
