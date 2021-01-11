@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import torch
 import matplotlib.pyplot as plt
 
@@ -5,7 +7,7 @@ import matplotlib.pyplot as plt
 def get_data_representation(autoencoder, dataloader, device):
     with torch.no_grad():
         reps = torch.stack(
-            [autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader])\
+            [autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader]) \
             .view(-1, autoencoder.repr_dim)
     return reps
 
@@ -39,3 +41,7 @@ def plot_repr_var(autoencoder, train_loader, device,
 
     if show:
         plt.show()
+
+
+def current_time():
+    return datetime.now().strftime('%y-%m-%d__%H-%M-%S')
