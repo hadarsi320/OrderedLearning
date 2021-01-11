@@ -1,8 +1,9 @@
-import math
+import pickle
 
 import torch
 
-from utils_package import math_utils
+from nueral_networks.autoencoders import Autoencoder
+from utils_package import math_utils, data_utils, utils
 
 
 class BinaryTreeNode:
@@ -80,3 +81,27 @@ class BinaryTree:
 
     def get_num_nodes(self):
         return self._num_nodes
+
+
+if __name__ == '__main__':
+    depth = 10
+    bin_quantile = 0.2
+    model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
+
+    dataset, dataloader = data_utils.get_cifar10_dataloader(-1)
+    autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'))
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+    autoencoder.to(device)
+    autoencoder.eval()
+
+    data, _ = next(iter(dataloader))
+    print('data loaded')
+
+    representation = utils.get_data_representation(autoencoder, dataloader, device)
+    data_repr = utils.binarize_data(representation, bin_quantile)
+    print('data representation created')
+
+    binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
+    pickle.dump(binary_tree, open(f'binary_tree_{depth}.pkl', 'wb'))
+    print(f'Binary tree created, with {binary_tree.get_num_nodes():,} nodes')
