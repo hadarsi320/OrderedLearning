@@ -12,7 +12,7 @@ def main():
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     autoencoder.eval()
     autoencoder.to(device)
-    _, train_loader = data_utils.load_cifar10()
+    _, train_loader = data_utils.get_cifar10_dataloader()
     utils.plot_repr_var(autoencoder, train_loader, device, show=True)
 
 

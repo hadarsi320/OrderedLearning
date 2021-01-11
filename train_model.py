@@ -137,7 +137,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, a
     model_name = f'nestedDropoutAutoencoder_deep_{deep_str}_{activation}_' \
                  + datetime.now().strftime('%y-%m-%d__%H-%M-%S')
 
-    train_dataset, train_loader = data_utils.load_cifar10(batch_size)
+    train_dataset, train_loader = data_utils.get_cifar10_dataloader(batch_size)
     # print(f'Epochs: {epochs} Batch size {batch_size} Number of batches {len(train_loader)}\n\n')
     autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
     # print('The number of the model\'s parameters: {:,}'.format(sum(p.numel() for p in autoencoder.parameters())))
