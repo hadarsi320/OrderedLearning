@@ -32,7 +32,7 @@ def main():
     print('data representation created')
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
-    pickle.dump(binary_tree, open(f'binary_tree_{depth}', 'wb'))
+    pickle.dump(binary_tree, open(f'binary_tree_{depth}_newg', 'wb'))
     print(f'Binary tree created, with {binary_tree.get_num_nodes()} nodes')
 
     # random.seed(420)

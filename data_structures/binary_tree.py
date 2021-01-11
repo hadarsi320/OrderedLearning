@@ -43,25 +43,25 @@ class BinaryTree:
         self._root = self._generate_tree()
 
     def _generate_tree(self):
-        # initial_mask = torch.ones(self.__data_repr.shape[0], dtype=torch.bool)
-        root = self._generate_node(self.__data, self.__code, -1, None)
+        initial_mask = torch.ones(self.__code.shape[0], dtype=torch.bool)
+        root = self._generate_node(initial_mask, - 1, None)
         return root
 
-    def _generate_node(self, data: torch.Tensor, code: torch.Tensor, depth, parent):
+    def _generate_node(self, mask, depth, parent):
         self._num_nodes += 1
         if math_utils.is_power_of_2(self._num_nodes):
-            print(f'Creating node {self._num_nodes:,} out of {2**self._tree_depth:,}')
+            print(f'Creating node {self._num_nodes:,} out of {2 ** self._tree_depth:,}')
 
-        node = BinaryTreeNode(data, depth, parent)
+        node = BinaryTreeNode(mask, depth, parent)
         depth += 1
         if depth < self._tree_depth:
-            left_son_mask = code[:, depth] == 0
+            left_son_mask = torch.logical_and(self.__code[:, depth] == 0, mask)
             if torch.any(left_son_mask):
-                node.left_son = self._generate_node(data[left_son_mask], code[left_son_mask], depth, node)
+                node.left_son = self._generate_node(left_son_mask, depth, node)
 
-            right_son_mask = code[:, depth] == 1
+            right_son_mask = torch.logical_and(self.__code[:, depth] == 1, mask)
             if torch.any(right_son_mask):
-                node.right_son = self._generate_node(data[right_son_mask], code[right_son_mask], depth, node)
+                node.right_son = self._generate_node(right_son_mask, depth, node)
         return node
 
     def search_tree(self, item_repr: torch.Tensor, result_size: int = None, depth: int = None):
@@ -76,7 +76,7 @@ class BinaryTree:
                 node = node.left_son
             else:
                 node = node.right_son
-        return node.data
+        return self.__data[node.data]
 
     def get_num_nodes(self):
         return self._num_nodes
