@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from torch import optim, nn, linalg
 from torch.distributions import Geometric
+from tqdm import tqdm
 
 from nueral_networks.autoencoders import Autoencoder
 from utils_package import data_utils, utils, nn_utils
@@ -18,7 +19,7 @@ def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Ten
     new_repr = autoencoder.get_representation(batch)
 
     # difference = linalg.norm((new_repr - old_repr)[:, unit]) / len(batch)
-    difference = linalg.norm((new_repr - old_repr)[:, :unit+1]) / (len(batch) * (unit+1))
+    difference = linalg.norm((new_repr - old_repr)[:, :unit + 1]) / (len(batch) * (unit + 1))
     if difference <= eps:
         succession[0] += 1
     else:
@@ -55,7 +56,7 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
 
     batch_print = len(train_loader) // 5
     losses = []
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs)):
         print(f'\tEpoch {epoch + 1}/{epochs} ({converged_unit}/{autoencoder.repr_dim} converged units)')
         batch_losses = []
         for i, (batch, _) in enumerate(train_loader):
@@ -116,10 +117,7 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
     if save_plots or show_plots:
         utils.plot_repr_var(autoencoder, train_loader, device,
                             title='Final representation variance', show=show_plots, **kwargs)
-    if save_models:
-        torch.save(autoencoder, f'models/{model_name}.pt')
 
-    if save_plots or show_plots:
         plt.clf()
         plt.plot(losses)
         plt.ylabel('Losses')
@@ -129,35 +127,45 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
         if show_plots:
             plt.show()
 
-    return converged_unit
+    if save_models:
+        torch.save(autoencoder, f'models/{model_name}.pt')
+
+    return converged_unit, autoencoder
 
 
-def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, activation='ReLU'):
+def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, nested_dropout_p, activation='ReLU',
+                epoch_print=10):
+    function_params = locals()
+
     deep_str = 'deep' if deep else 'shallow'
-    model_name = f'nestedDropoutAutoencoder_deep_{deep_str}_{activation}_' \
+    model_name = f'nestedDropoutAutoencoder_{deep_str}_{activation}_' \
                  + datetime.now().strftime('%y-%m-%d__%H-%M-%S')
 
     train_dataset, train_loader = data_utils.get_cifar10_dataloader(batch_size)
-    # print(f'Epochs: {epochs} Batch size {batch_size} Number of batches {len(train_loader)}\n\n')
     autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
+    # print(f'Epochs: {epochs} Batch size {batch_size} Number of batches {len(train_loader)}\n\n')
     # print('The number of the model\'s parameters: {:,}'.format(sum(p.numel() for p in autoencoder.parameters())))
-    converged_units = fit_nested_dropout_autoencoder(autoencoder, train_loader, learning_rate, epochs, model_name,
-                                                     nested_dropout_p=0.03, bound=bound, epoch_print=2,
-                                                     save_models=True, save_plots=False, eps=eps, show_plots=False,
-                                                     corrupt_input=True, demand_code_invariance=True)
-    return converged_units
+    converged_units, autoencoder = fit_nested_dropout_autoencoder(autoencoder, train_loader, learning_rate, epochs,
+                                                                  model_name, nested_dropout_p=nested_dropout_p,
+                                                                  bound=bound, epoch_print=epoch_print,
+                                                                  save_models=False, save_plots=False, eps=eps)
+    torch.save({'autoencoder': autoencoder, 'converged_unit': converged_units, 'parameters': function_params},
+               f'models/{model_name}_dict.pt')
 
 
 def main():
-    # epochs = [100]
-    # learning_rate = [1e-2, 1e-3]
-    # batch_size = [100, 1000]
-    # rep_dim = [512]
-    # deep = [True]
+    batch_size = [1000]
+    learning_rate = [1e-2, 1e-3]
+    eps = [1e-2, 5e-3]
+    bound = [10, 20]
+    deep = [False]
+    repr_dim = [1024]
+    epochs = [300]
+    p = [0.1]
 
-    # print(list(itertools.product(epochs, learning_rate, batch_size, rep_dim, activation, deep)))
-
-    test_params(1000, 1e-3, 1e-2, 10, True, 512, 300)
+    parameters = itertools.product(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, p)
+    for params in parameters:
+        test_params(*params)
 
 
 if __name__ == '__main__':
