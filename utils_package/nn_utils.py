@@ -1,5 +1,6 @@
 from math import log2, ceil, floor
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -59,3 +60,14 @@ def estimate_code_variance(autoencoder, batch, batch_repr=None):
     code_variance = torch.sum(
         torch.pow(linalg.norm(noisy_batch_repr - batch_repr, dim=1) / linalg.norm(noise, dim=1), 2)) / len(batch)
     return code_variance
+
+
+@torch.no_grad()
+def get_model_loss(model, dataloader, loss_function, device):
+    model.eval()
+    losses = []
+    for x, y in dataloader:
+        x, y = x.to(device), y.to(device)
+        res = model(x)
+        losses.append(loss_function(x, y, res).item())
+    return np.average(losses)
