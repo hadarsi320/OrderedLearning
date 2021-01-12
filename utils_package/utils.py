@@ -4,12 +4,9 @@ import torch
 import matplotlib.pyplot as plt
 
 
+@torch.no_grad()
 def get_data_representation(autoencoder, dataloader, device):
-    with torch.no_grad():
-        reps = torch.stack(
-            [autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader]) \
-            .view(-1, autoencoder.repr_dim)
-    return reps
+    return torch.cat([autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader])
 
 
 def restore_image(data, mean, std) -> torch.tensor:
@@ -27,6 +24,7 @@ def binarize_data(data: torch.Tensor, bin_quantile=0.5):
     return binarized
 
 
+@torch.no_grad()
 def plot_repr_var(autoencoder, train_loader, device,
                   show=False, **kwargs):
     plt.clf()
