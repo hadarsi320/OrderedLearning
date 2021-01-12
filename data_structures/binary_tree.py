@@ -68,7 +68,7 @@ class BinaryTree:
     def search_tree(self, item_repr: torch.Tensor, result_size: int = None, depth: int = None):
         node: BinaryTreeNode = self._root
         for i, unit in enumerate(item_repr.squeeze()):
-            if len(node.data) <= 1 or \
+            if len(node.data) <= 1 or i == self._tree_depth or \
                     (depth is not None and i == depth) or \
                     (result_size is not None and len(node.data) <= result_size):
                 break
