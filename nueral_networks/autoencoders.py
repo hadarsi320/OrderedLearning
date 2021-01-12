@@ -22,8 +22,8 @@ class Autoencoder(nn.Module):
         x = self._encoder(x)
         return self._decoder(x)
 
-    def get_representation(self, x):
+    def encode(self, x):
         return self._encoder(x)
 
-    def get_reconstructions(self, x):
+    def decode(self, x):
         return self._decoder(x)

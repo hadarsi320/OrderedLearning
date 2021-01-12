@@ -12,10 +12,10 @@ def main():
 
     for file in os.listdir('models/'):
         if file.endswith('pt'):
-            dict = torch.load(f'models/{file}', map_location=device)
-            autoencoder = dict['autoencoder']
-            converged_unit = dict['converged_unit']
-            model_params = dict['parameters']
+            model_dict = torch.load(f'models/{file}', map_location=device)
+            autoencoder = model_dict['autoencoder']
+            converged_unit = model_dict['converged_unit']
+            model_params = model_dict['parameters']
             print(f'{file}:')
             for key in model_params:
                 print(f'\t{key}: {model_params[key]}')

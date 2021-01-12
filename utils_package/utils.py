@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 @torch.no_grad()
 def get_data_representation(autoencoder, dataloader, device):
-    return torch.cat([autoencoder.get_representation(batch.to(device)) for batch, _ in dataloader])
+    return torch.cat([autoencoder.encode(batch.to(device)) for batch, _ in dataloader])
 
 
 def restore_image(data, mean, std) -> torch.tensor:
