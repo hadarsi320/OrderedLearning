@@ -17,13 +17,17 @@ def get_cifar10_dataloader(batch_size=1):
         dataloader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
     else:
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-    return dataset, dataloader
+    return dataloader
 
 
-def load_cifar10():
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
-                                    transforms.Lambda(lambda t: t.view(-1))])
-    dataset = torchvision.datasets.CIFAR10(root='data/', download=True,
-                                           transform=transform, train=True)
-    return torch.stack([sample for sample, _ in dataset])
+def load_cifar10(dataloader=None):
+    if dataloader is None:
+        transform = transforms.Compose([transforms.ToTensor(),
+                                        transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+                                        transforms.Lambda(lambda t: t.view(-1))])
+        dataset = torchvision.datasets.CIFAR10(root='data/', download=True,
+                                               transform=transform, train=True)
+        return torch.stack([sample for sample, _ in dataset])
+
+    else:
+        return torch.cat([sample for sample, _ in dataloader])
