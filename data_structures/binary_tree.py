@@ -82,6 +82,9 @@ class BinaryTree:
     def get_num_nodes(self):
         return self._num_nodes
 
+    def get_depth(self):
+        return self._tree_depth
+
 
 if __name__ == '__main__':
     depth = 10
