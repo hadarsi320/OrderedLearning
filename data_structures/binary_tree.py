@@ -88,14 +88,13 @@ if __name__ == '__main__':
     bin_quantile = 0.2
     model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 
-    dataset, dataloader = data_utils.get_cifar10_dataloader(-1)
-    autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'))
+    dataloader = data_utils.get_cifar10_dataloader()
     device = utils.get_device()
-
-    autoencoder.to(device)
+    autoencoder: Autoencoder = torch.load(model_pickle, map_location=device)
     autoencoder.eval()
 
-    data, _ = next(iter(dataloader))
+    # data, _ = next(iter(dataloader))
+    data = data_utils.load_cifar10(dataloader)
     print('data loaded')
 
     representation = utils.get_data_representation(autoencoder, dataloader, device)
@@ -103,5 +102,5 @@ if __name__ == '__main__':
     print('data representation created')
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
-    pickle.dump(binary_tree, open(f'binary_tree_{depth}.pkl', 'wb'))
+    pickle.dump((binary_tree, data_repr), open(f'binary_tree_{depth}.pkl', 'wb'))
     print(f'Binary tree created, with {binary_tree.get_num_nodes():,} nodes')
