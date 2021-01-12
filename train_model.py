@@ -48,7 +48,7 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
     corrupt_layer = nn.Dropout(p=corrupt_p)
 
     autoencoder.train(True)
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    device = utils.get_device()
     autoencoder.to(device)
 
     optimizer = optim.Adam(autoencoder.parameters(), lr=learning_rate)
