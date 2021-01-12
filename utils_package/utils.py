@@ -43,3 +43,14 @@ def plot_repr_var(autoencoder, train_loader, device,
 
 def current_time():
     return datetime.now().strftime('%y-%m-%d__%H-%M-%S')
+
+
+def get_device():
+    if torch.cuda.is_available():
+        if torch.cuda.device_count() == 8:
+            return torch.device('cuda:7')
+        return torch.device('cuda')
+    return torch.device('cpu')
+
+
+# TODO create a function which saves a model in a dir with a log file

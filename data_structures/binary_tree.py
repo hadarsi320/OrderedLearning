@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     dataset, dataloader = data_utils.get_cifar10_dataloader(-1)
     autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'))
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    device = utils.get_device()
 
     autoencoder.to(device)
     autoencoder.eval()
