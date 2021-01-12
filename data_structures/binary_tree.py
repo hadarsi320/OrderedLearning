@@ -68,15 +68,21 @@ class BinaryTree:
     def search_tree(self, item_repr: torch.Tensor, result_size: int = None, depth: int = None):
         node: BinaryTreeNode = self._root
         for i, unit in enumerate(item_repr.squeeze()):
-            if len(node.data) <= 1 or i == self._tree_depth or \
+            if len(node.data) == 1 or i == self._tree_depth or \
                     (depth is not None and i == depth) or \
                     (result_size is not None and len(node.data) <= result_size):
                 break
 
             if unit == 0:
+                if node.left_son is None:
+                    break
                 node = node.left_son
+
             else:
+                if node.right_son is None:
+                    break
                 node = node.right_son
+
         return self.__data[node.data]
 
     def get_num_nodes(self):
@@ -87,23 +93,23 @@ class BinaryTree:
 
 
 if __name__ == '__main__':
-    depth = 10
+    depth = 5
     bin_quantile = 0.2
-    model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
+    model_pickle = f'../models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 
     dataloader = data_utils.get_cifar10_dataloader()
     device = utils.get_device()
+    data = data_utils.load_cifar10(dataloader)
+    print('Data loaded')
+
     autoencoder: Autoencoder = torch.load(model_pickle, map_location=device)
     autoencoder.eval()
-
-    # data, _ = next(iter(dataloader))
-    data = data_utils.load_cifar10(dataloader)
-    print('data loaded')
+    print('Model loaded')
 
     representation = utils.get_data_representation(autoencoder, dataloader, device)
     data_repr = utils.binarize_data(representation, bin_quantile)
-    print('data representation created')
+    print('Data representation created')
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
-    pickle.dump((binary_tree, data_repr), open(f'binary_tree_{depth}.pkl', 'wb'))
     print(f'Binary tree created, with {binary_tree.get_num_nodes():,} nodes')
+    pickle.dump((binary_tree, data_repr), open(f'binary_tree_{depth}.pkl', 'wb'))
