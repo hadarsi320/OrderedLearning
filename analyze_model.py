@@ -8,7 +8,7 @@ from utils_package import utils, data_utils, nn_utils
 
 def main():
     device = utils.get_device()
-    _, dataloader = data_utils.get_cifar10_dataloader(1000)
+    dataloader = data_utils.get_cifar10_dataloader(1000)
 
     for file in os.listdir('models/'):
         if file.endswith('pt'):
