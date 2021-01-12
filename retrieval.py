@@ -63,19 +63,5 @@ def main():
     plt.savefig('plots/retrieval_time')
 
 
-    # random.seed(420)
-    # for sample, _ in dataset:
-    #     if random.random() <= 0.9:
-    #         continue
-    #     plt.imshow(utils.restore_image(sample.view(3, 32, 32), mean, std))
-    #     plt.show()
-    #
-    #     with torch.no_grad():
-    #         reconstructed = autoencoder(sample).to('cpu')
-    #         plt.imshow(utils.restore_image(reconstructed.view(3, 32, 32), mean, std))
-    #         plt.show()
-    #     break
-
-
 if __name__ == '__main__':
     main()
