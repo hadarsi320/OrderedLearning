@@ -51,7 +51,7 @@ class BinaryTree:
     def _generate_node(self, mask, depth, parent):
         self._num_nodes += 1
         if math_utils.is_power_of_2(self._num_nodes):
-            print(f'Creating node {self._num_nodes:,} out of {2 ** self._tree_depth:,}')
+            print(f'Creating node {self._num_nodes:,} out of {2 ** (self._tree_depth + 1) - 1:,}')
 
         node = BinaryTreeNode(mask, depth, parent)
         depth += 1
@@ -93,7 +93,7 @@ class BinaryTree:
 
 
 def main():
-    depth = 8
+    depth = 3
     bin_quantile = 0.2
     model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 

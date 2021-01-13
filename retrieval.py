@@ -46,7 +46,7 @@ def evaluate_retrieval_method(data_repr: torch.Tensor, retrieval_method, code_le
 
 def main():
     model_pickle = 'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
-    binary_tree_pickle = 'pickles/binary_tree_50.pkl'
+    binary_tree_pickle = 'pickles/binary_tree_32.pkl'
     current_time = utils.current_time()
 
     dataloader = data_utils.get_cifar10_dataloader(1000)
@@ -69,7 +69,7 @@ def main():
     print('Binary tree loaded')
 
     def tree_search_i(sample, i):
-        return binary_tree.search_tree(list(sample)[:i], depth=i)
+        return binary_tree.search_tree(list(sample)[:i], max_depth=i)
 
     tree_search_times = evaluate_retrieval_method(binarized_repr, tree_search_i, repr_dim)
     pickle.dump(tree_search_times, open(f'pickles/or_retrieval_times_{current_time}.pkl', 'wb'))
