@@ -69,7 +69,7 @@ def main():
     print('Binary tree loaded')
 
     def tree_search_i(sample, i):
-        return binary_tree.search_tree(list(sample)[:i], max_depth=i)
+        return binary_tree.search_tree(list(sample)[:i], depth=i)
 
     tree_search_times = evaluate_retrieval_method(binarized_repr, tree_search_i, repr_dim)
     pickle.dump(tree_search_times, open(f'pickles/or_retrieval_times_{current_time}.pkl', 'wb'))
@@ -90,21 +90,6 @@ def main():
     plt.title('Retrieval time per code length')
     plt.legend()
     plt.savefig('plots/retrieval_times')
-
-    # or_retrieval_times = pickle.load(
-    #     open("/mnt/ml-srv1/home/hadarsi/ordered_learning/pickles/or_retrieval_times_21-01-12__22-34-45.pkl", 'rb'))
-    # plt.plot(or_retrieval_times, label='Ordered Retrieval')
-    #
-    # ls_retrieval_times = pickle.load(
-    #     open('/mnt/ml-srv1/home/hadarsi/ordered_learning/pickles/ls_retrieval_times_21-01-12__22-34-45.pkl', 'rb'))
-    # plt.plot(ls_retrieval_times, label='Linear Scan')
-    #
-    # plt.legend()
-    # plt.title('Retrieval times by code size')
-    # plt.ylabel('Average retrieval times')
-    # plt.xlabel('Code length')
-    # plt.yscale('log')
-    # plt.show()
 
 
 if __name__ == '__main__':
