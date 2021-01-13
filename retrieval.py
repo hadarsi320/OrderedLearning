@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from data_structures.binary_tree import BinaryTree
+from binary_tree import BinaryTree
 from nueral_networks.autoencoders import Autoencoder
 from utils_package import data_utils, utils
 
@@ -24,14 +24,19 @@ def linear_scan(item, data, coded_data, output_size=10) -> torch.Tensor:
     return data[ordered_neighbors[:output_size]]
 
 
-def evaluate_retrieval_method(data_repr: torch.Tensor, retrieval_method, code_length, num_samples=2500) -> dict:
+def evaluate_retrieval_method(data_repr: torch.Tensor, retrieval_method, code_length, num_samples=1000) -> dict:
     times = {}
     for i in tqdm(range(math.ceil(math.log2(code_length) + 1))):
         i = 2 ** i if 2 ** i <= code_length else code_length
 
         _times = []
-        samples = data_repr[torch.randint(len(data_repr), (num_samples,))]
-        for sample in tqdm(samples, desc=f'Code length {i}'):
+        if num_samples is None:
+            samples = data_repr
+        else:
+            samples = data_repr[torch.randint(len(data_repr), (num_samples,))]
+
+        # for sample in tqdm(samples, desc=f'Code length {i}'):
+        for sample in samples:
             start = time()
             retrieval_method(sample, i)
             _times.append(time() - start)
@@ -64,7 +69,7 @@ def main():
     print('Binary tree loaded')
 
     def tree_search_i(sample, i):
-        return binary_tree.search_tree(sample, depth=i)
+        return binary_tree.search_tree(list(sample)[:i], max_depth=i)
 
     tree_search_times = evaluate_retrieval_method(binarized_repr, tree_search_i, repr_dim)
     pickle.dump(tree_search_times, open(f'pickles/or_retrieval_times_{current_time}.pkl', 'wb'))

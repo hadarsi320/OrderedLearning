@@ -45,7 +45,7 @@ class BinaryTree:
 
     def _generate_tree(self):
         initial_mask = torch.ones(self.__code.shape[0], dtype=torch.bool)
-        root = self._generate_node(initial_mask, - 1, None)
+        root = self._generate_node(initial_mask, -1, None)
         return root
 
     def _generate_node(self, mask, depth, parent):
@@ -55,7 +55,7 @@ class BinaryTree:
 
         node = BinaryTreeNode(mask, depth, parent)
         depth += 1
-        if depth < self._tree_depth:
+        if depth < self._tree_depth and torch.sum(mask) > 1:
             left_son_mask = torch.logical_and(self.__code[:, depth] == 0, mask)
             if torch.any(left_son_mask):
                 node.left_son = self._generate_node(left_son_mask, depth, node)
@@ -65,11 +65,11 @@ class BinaryTree:
                 node.right_son = self._generate_node(right_son_mask, depth, node)
         return node
 
-    def search_tree(self, item: torch.Tensor, result_size: int = None, depth: int = None):
+    def search_tree(self, item: list, result_size: int = None, max_depth: int = None):
         node: BinaryTreeNode = self._root
-        for i, unit in enumerate(item.squeeze()):
-            if len(node.data) == 1 or i == self._tree_depth or \
-                    (depth is not None and i == depth) or \
+        for i, unit in enumerate(item):
+            if i == self._tree_depth or len(node.data) == 1 or \
+                    (max_depth is not None and i == max_depth) or \
                     (result_size is not None and len(node.data) <= result_size):
                 break
 
