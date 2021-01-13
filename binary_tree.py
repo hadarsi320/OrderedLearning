@@ -93,7 +93,7 @@ class BinaryTree:
 
 
 def main():
-    depth = 32
+    depth = 8
     bin_quantile = 0.2
     model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 

@@ -30,6 +30,8 @@ def plot_repr_var(autoencoder, dataloader, device: torch.device, scale='log', sh
     reprs = get_data_representation(autoencoder, dataloader, device)
     plt.plot(torch.var(reprs, dim=0).to('cpu'))
     plt.yscale(scale)
+    plt.xlabel('Units')
+    plt.ylabel('Variance')
 
     if 'title' in kwargs:
         plt.title(kwargs.pop('title'))
