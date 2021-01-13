@@ -25,11 +25,11 @@ def binarize_data(data: torch.Tensor, bin_quantile=0.5):
 
 
 @torch.no_grad()
-def plot_repr_var(autoencoder, train_loader, device,
-                  show=False, **kwargs):
+def plot_repr_var(autoencoder, dataloader, device: torch.device, scale='log', show=False, **kwargs):
     plt.clf()
-    reprs = get_data_representation(autoencoder, train_loader, device)
+    reprs = get_data_representation(autoencoder, dataloader, device)
     plt.plot(torch.var(reprs, dim=0).to('cpu'))
+    plt.yscale(scale)
 
     if 'title' in kwargs:
         plt.title(kwargs.pop('title'))
