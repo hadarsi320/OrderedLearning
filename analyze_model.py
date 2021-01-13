@@ -12,7 +12,7 @@ def main():
 
     accuracies_dict = {}
     for file in os.listdir('models/'):
-        if file.endswith('pt'):
+        if file.endswith('dict.pt'):
             model_dict = torch.load(f'models/{file}', map_location=device)
             autoencoder = model_dict['autoencoder']
             converged_unit = model_dict['converged_unit']
@@ -27,7 +27,7 @@ def main():
 
             accuracies_dict[file] = loss
 
-    best_models = sorted(accuracies_dict, key=lambda x: accuracies_dict[key], reverse=True)[:5]
+    best_models = sorted(accuracies_dict, key=lambda x: accuracies_dict[x])[:5]
     for file in best_models:
         autoencoder = torch.load(f'models/{file}', map_location=device)['autoencoder']
         utils.plot_repr_var(autoencoder, dataloader, device, title=file, show=True)
