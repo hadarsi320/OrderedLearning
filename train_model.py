@@ -130,37 +130,40 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
     if save_models:
         torch.save(autoencoder, f'models/{model_name}.pt')
 
-    return converged_unit, autoencoder
+    output = {'converged_unit': converged_unit, 'autoencoder': autoencoder, 'losses': losses,
+              'optimizier_state': optimizer.state_dict()}
+
+    return output
 
 
 def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, nested_dropout_p, activation='ReLU',
                 epoch_print=10):
-    function_params = locals()
+    model_params = locals()
 
     deep_str = 'deep' if deep else 'shallow'
     model_name = f'nestedDropoutAutoencoder_{deep_str}_{activation}_' \
                  + datetime.now().strftime('%y-%m-%d__%H-%M-%S')
-
     dataloader = data_utils.get_cifar10_dataloader(batch_size)
     autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
     # print(f'Epochs: {epochs} Batch size {batch_size} Number of batches {len(dataloader)}\n\n')
     # print('The number of the model\'s parameters: {:,}'.format(sum(p.numel() for p in autoencoder.parameters())))
-    converged_units, autoencoder = fit_nested_dropout_autoencoder(autoencoder, dataloader, learning_rate, epochs,
-                                                                  model_name, nested_dropout_p=nested_dropout_p,
-                                                                  bound=bound, epoch_print=epoch_print,
-                                                                  save_models=False, save_plots=False, eps=eps)
-    torch.save({'autoencoder': autoencoder, 'converged_unit': converged_units, 'parameters': function_params},
-               f'models/{model_name}_dict.pt')
+    output = fit_nested_dropout_autoencoder(autoencoder, dataloader, learning_rate,
+                                            epochs, model_name,
+                                            nested_dropout_p=nested_dropout_p,
+                                            bound=bound, epoch_print=epoch_print,
+                                            save_models=True, save_plots=False, eps=eps)
+    output['parameters'] = model_params
+    torch.save(obj=output, f=f'models/{model_name}_dict.pt')
 
 
 def main():
     batch_size = [1000]
-    learning_rate = [1e-2, 1e-3]
-    eps = [1e-2, 5e-3]
+    learning_rate = [1e-3]
+    eps = [1e-3]
     bound = [10, 20]
     deep = [False]
     repr_dim = [1024]
-    epochs = [300]
+    epochs = [500]
     p = [0.1]
 
     parameters = itertools.product(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, p)
