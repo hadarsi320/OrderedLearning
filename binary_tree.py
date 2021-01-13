@@ -107,7 +107,8 @@ def main():
     print('Model loaded')
 
     representation = utils.get_data_representation(autoencoder, dataloader, device)
-    data_repr = utils.binarize_data(representation, bin_quantile)
+    data_repr = utils.binarize_data(representation, bin_quantile).cpu()
+    del autoencoder
     print('Data representation created')
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
