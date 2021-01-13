@@ -65,9 +65,9 @@ class BinaryTree:
                 node.right_son = self._generate_node(right_son_mask, depth, node)
         return node
 
-    def search_tree(self, item_repr: torch.Tensor, result_size: int = None, depth: int = None):
+    def search_tree(self, item: torch.Tensor, result_size: int = None, depth: int = None):
         node: BinaryTreeNode = self._root
-        for i, unit in enumerate(item_repr.squeeze()):
+        for i, unit in enumerate(item.squeeze()):
             if len(node.data) == 1 or i == self._tree_depth or \
                     (depth is not None and i == depth) or \
                     (result_size is not None and len(node.data) <= result_size):
@@ -92,10 +92,10 @@ class BinaryTree:
         return self._tree_depth
 
 
-if __name__ == '__main__':
-    depth = 5
+def main():
+    depth = 8
     bin_quantile = 0.2
-    model_pickle = f'../models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
+    model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 
     dataloader = data_utils.get_cifar10_dataloader()
     device = utils.get_device()
@@ -112,4 +112,9 @@ if __name__ == '__main__':
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)
     print(f'Binary tree created, with {binary_tree.get_num_nodes():,} nodes')
-    pickle.dump((binary_tree, data_repr), open(f'binary_tree_{depth}.pkl', 'wb'))
+    pickle.dump({'binary tree': binary_tree, 'data_repr': data_repr},
+                open(f'pickles/binary_tree_{depth}.pkl', 'wb'))
+
+
+if __name__ == '__main__':
+    main()
