@@ -8,11 +8,9 @@ from tqdm import tqdm
 from nueral_networks.autoencoders import Autoencoder
 from utils_package import data_utils, utils
 
-import torch.nn.functional as F
-
 
 def main():
-    model_pickle = f'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-12__07-43-10_dict.pt'
+    model_pickle = f'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-13__02-50-53_dict.pt'
 
     dataloader = data_utils.get_cifar10_dataloader(1000)
     device = utils.get_device()

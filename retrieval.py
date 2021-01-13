@@ -7,8 +7,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from binary_tree import BinaryTree
-from nueral_networks.autoencoders import Autoencoder
+from binary_tree import BinaryTree, BinaryTreeNode
 from utils_package import data_utils, utils
 
 import matplotlib.pyplot as plt
@@ -52,7 +51,7 @@ def main():
     print('Data loaded')
 
     pickle_dict = pickle.load(open(binary_tree_pickle, 'rb'))
-    binary_tree = pickle_dict['binary_tree']
+    binary_tree = pickle_dict['binary tree']
     binarized_repr = pickle_dict['data_repr']
     print('Binary tree loaded')
 
