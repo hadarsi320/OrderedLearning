@@ -45,36 +45,27 @@ def evaluate_retrieval_method(data_repr: torch.Tensor, retrieval_method, code_le
 
 
 def main():
-    model_pickle = 'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
     binary_tree_pickle = 'pickles/binary_tree_32.pkl'
     current_time = utils.current_time()
 
-    dataloader = data_utils.get_cifar10_dataloader(1000)
-    device = utils.get_device()
-    data = torch.cat([sample for sample, _ in dataloader])
+    data = data_utils.load_cifar10()
     print('Data loaded')
 
-    autoencoder: Autoencoder = torch.load(model_pickle, map_location=device)
-    print('Autoencoder loaded')
-
-    data_repr = utils.get_data_representation(autoencoder, dataloader, device).cpu()
-    binarized_repr = utils.binarize_data(data_repr, bin_quantile=0.2)
-    repr_dim = autoencoder.repr_dim
-    del autoencoder
-    print('Code created')
-
-    # binary tree retrieval
-    binary_tree: BinaryTree = pickle.load(open(binary_tree_pickle, 'rb'))
-    repr_dim = min(repr_dim, binary_tree.get_depth())
+    pickle_dict = pickle.load(open(binary_tree_pickle, 'rb'))
+    binary_tree = pickle_dict['binary_tree']
+    binarized_repr = pickle_dict['data_repr']
     print('Binary tree loaded')
 
+    repr_dim = min(binarized_repr.shape[1], binary_tree.get_depth())
+
+    #       binary tree retrieval
     def tree_search_i(sample, i):
         return binary_tree.search_tree(list(sample)[:i], max_depth=i)
 
     tree_search_times = evaluate_retrieval_method(binarized_repr, tree_search_i, repr_dim)
     pickle.dump(tree_search_times, open(f'pickles/or_retrieval_times_{current_time}.pkl', 'wb'))
 
-    # linear retrieval
+    #       linear scan
     def linear_scan_i(sample, i):
         binarized_repr_i = binarized_repr[:, i].view(len(binarized_repr), -1)
         return linear_scan(sample[:i], data, binarized_repr_i)
