@@ -8,9 +8,11 @@ from tqdm import tqdm
 from nueral_networks.autoencoders import Autoencoder
 from utils_package import data_utils, utils
 
+import torch.nn.functional as F
+
 
 def main():
-    model_pickle = f'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-12__04-17-04_dict.pt'
+    model_pickle = f'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-12__07-43-10_dict.pt'
 
     dataloader = data_utils.get_cifar10_dataloader(1000)
     device = utils.get_device()
@@ -18,28 +20,28 @@ def main():
     autoencoder.eval()
 
     repr_dim = autoencoder.repr_dim
-    reconstruction_loss = []
+    reconst_loss = np.empty(repr_dim)
 
     for i in tqdm(range(repr_dim)):
-        _rec_loss = []
+        losses = []
         for sample, _ in dataloader:
             sample = sample.to(device)
-            sample_rep = autoencoder.get_representation(sample)
-            cut_repr = torch.zeros_like(sample_rep)
-            cut_repr[:, :i + 1] = sample_rep[:, :i + 1]
-            reconst = autoencoder.get_reconstructions(cut_repr)
-            _rec_loss.append(torch.linalg.norm(sample - reconst).item())
-        reconstruction_loss.append(np.mean(_rec_loss))
+            sample_repr = autoencoder.encode(sample)
+            sample_repr[:, i + 1:] = 0
+            reconst = autoencoder.decode(sample_repr)
+            losses.append(torch.mean((sample - reconst) ** 2).item())
+        reconst_loss[i] = np.mean(losses)
 
-    pickle.dump((reconstruction_loss, repr_dim),
+    pickle.dump((reconst_loss, repr_dim),
                 open(f'pickles/reconstruction_loss_{utils.current_time()}.pkl', 'wb'))
 
-    plt.plot(range(1, repr_dim + 1), reconstruction_loss)
+    plt.plot(range(1, repr_dim + 1), reconst_loss)
     plt.xlabel('Representation Bytes')
     plt.ylabel('Reconstruction Error')
-    plt.xticks(list(range(0, repr_dim, 100)) + [repr_dim])
+    plt.xticks(list(range(0, repr_dim, 100))[:-1] + [repr_dim])
     plt.title('Reconstruction Error by Representation Bytes')
     plt.savefig('plots/reconstruction_error')
+    plt.yscale('log')
     plt.show()
 
 
