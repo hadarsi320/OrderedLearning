@@ -8,7 +8,7 @@ import torch
 from tqdm import tqdm
 
 from binary_tree import BinaryTree, BinaryTreeNode
-from utils_package import data_utils, utils
+from utils_package import cifar_utils, utils
 
 import matplotlib.pyplot as plt
 
@@ -43,11 +43,11 @@ def evaluate_retrieval_method(data_repr: torch.Tensor, retrieval_method, code_le
     return times
 
 
-def main():
+def test_retrieval_times():
     binary_tree_pickle = 'pickles/binary_tree_32.pkl'
     current_time = utils.current_time()
 
-    data = data_utils.load_cifar10()
+    data = cifar_utils.load_cifar10()
     print('Data loaded')
 
     pickle_dict = pickle.load(open(binary_tree_pickle, 'rb'))
@@ -66,11 +66,14 @@ def main():
 
     #       linear scan
     def linear_scan_i(sample, i):
-        binarized_repr_i = binarized_repr[:, i].view(len(binarized_repr), -1)
+        binarized_repr_i = binarized_repr[:, :i].view(len(binarized_repr), -1)
         return linear_scan(sample[:i], data, binarized_repr_i)
 
-    linear_scan_times = evaluate_retrieval_method(binarized_repr, linear_scan_i, repr_dim)
+    linear_scan_times = evaluate_retrieval_method(binarized_repr, linear_scan_i, repr_dim, num_samples=100)
     pickle.dump(linear_scan_times, open(f'pickles/ls_retrieval_times_{current_time}.pkl', 'wb'))
+
+    tree_search_times = pickle.load(open('pickles/or_retrieval_times_21-01-14__16-18-02.pkl', 'rb'))
+    linear_scan_times = pickle.load(open('pickles/ls_retrieval_times_21-01-14__13-03-04.pkl', 'rb'))
 
     # plotting
     plt.plot(tree_search_times.keys(), tree_search_times.values(), label='Tree Search')
@@ -78,9 +81,50 @@ def main():
     plt.xlabel('Code Length')
     plt.ylabel('Average retrieval time per query')
     plt.title('Retrieval time per code length')
+    plt.yticks(list(tree_search_times.keys()))
+    plt.yscale('log')
     plt.legend()
     plt.savefig('plots/retrieval_times')
+    plt.show()
+
+
+def retrieve_images():
+    binary_tree_pickle = 'pickles/binary_tree_32.pkl'
+    seeds = [10024, 15243]
+    seed = seeds[1]
+    torch.random.manual_seed(seed)
+
+    pickle_dict = pickle.load(open(binary_tree_pickle, 'rb'))
+    binary_tree: BinaryTree = pickle_dict['binary tree']
+    binarized_repr = pickle_dict['data_repr']
+
+    sample = binarized_repr[torch.randint(len(binarized_repr), (1,))].squeeze()
+
+    # for i in range(1, binary_tree.get_depth()):
+    #     results = binary_tree.search_tree(list(sample), max_depth=i)
+    #     print(f'{i}: {len(results)}')
+    #     if len(results) == 1:
+    #         break
+
+    depths = {10024: [13, 14, 19], 15243: [18, 19, 20]}
+    for depth in depths[seed]:
+        results = binary_tree.search_tree(list(sample), max_depth=depth)
+        fig, axes = plt.subplots(ncols=len(results))
+        fig.suptitle(f'Retrieval results at depth {depth}')
+        for image, axis in zip(results, axes):
+            axis.imshow(cifar_utils.restore(image))
+            axis.set_xticks([])
+            axis.set_yticks([])
+        plt.savefig(f'plots/retrieval_{seed}_{depth}')
+        plt.show()
+
+    image = binary_tree.search_tree(list(sample))[0]
+    plt.imshow(cifar_utils.restore(image))
+    plt.title('The query image')
+    plt.yticks([])
+    plt.xticks([])
+    plt.show()
 
 
 if __name__ == '__main__':
-    main()
+    retrieve_images()
