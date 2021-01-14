@@ -1,3 +1,4 @@
+import math
 import pickle
 
 import matplotlib.pyplot as plt
@@ -10,7 +11,8 @@ from utils_package import data_utils, utils
 
 
 def main():
-    model_pickle = f'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-13__02-50-53_dict.pt'
+    # Reconstructing
+    model_pickle = f'models/nestedDropoutAutoencoder_shallow_21-01-13__10-31-45_dict.pt'
 
     dataloader = data_utils.get_cifar10_dataloader(1000)
     device = utils.get_device()
@@ -18,14 +20,15 @@ def main():
     autoencoder.eval()
 
     repr_dim = autoencoder.repr_dim
-    reconst_loss = np.empty(repr_dim)
+    indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
+    reconst_loss = np.empty(len(indices))
 
-    for i in tqdm(range(repr_dim)):
+    for i, index in tqdm(enumerate(indices), total=len(indices)):
         losses = []
         for sample, _ in dataloader:
             sample = sample.to(device)
             sample_repr = autoencoder.encode(sample)
-            sample_repr[:, i + 1:] = 0
+            sample_repr[:, index + 1:] = 0
             reconst = autoencoder.decode(sample_repr)
             losses.append(torch.mean((sample - reconst) ** 2).item())
         reconst_loss[i] = np.mean(losses)
@@ -33,11 +36,20 @@ def main():
     pickle.dump((reconst_loss, repr_dim),
                 open(f'pickles/reconstruction_loss_{utils.current_time()}.pkl', 'wb'))
 
-    plt.plot(range(1, repr_dim + 1), reconst_loss)
+    # Plotting
+    nd_reconst_loss, repr_dim = pickle.load(
+        open('pickles/reconstruction_loss_21-01-14__13-10-00_nested_dropout.pkl', 'rb'))
+    vanilla_reconst_loss, repr_dim = pickle.load(
+        open('pickles/reconstruction_loss_21-01-14__13-24-42_vanilla.pkl', 'rb'))
+    indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
+
+    plt.plot(indices, nd_reconst_loss, label='Nested dropout autoencoder')
+    plt.plot(indices, vanilla_reconst_loss, label='Standard autoencoder')
     plt.xlabel('Representation Bytes')
     plt.ylabel('Reconstruction Error')
-    plt.xticks(list(range(0, repr_dim, 100))[:-1] + [repr_dim])
-    plt.title('Reconstruction Error by Representation Bytes')
+    plt.xticks([1, 64, 128, 256, 512, 1024])
+    plt.title('Reconstruction Error by Representation Bits')
+    plt.legend()
     plt.savefig('plots/reconstruction_error')
     plt.yscale('log')
     plt.show()
