@@ -1,9 +1,8 @@
+import matplotlib.pyplot as plt
 import torch
 
 from nueral_networks.autoencoders import Autoencoder
 from utils_package import cifar_utils, utils
-
-import matplotlib.pyplot as plt
 
 
 @torch.no_grad()
