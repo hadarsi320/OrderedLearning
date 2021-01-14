@@ -1,9 +1,11 @@
 import pickle
+from datetime import timedelta
+from time import time
 
 import torch
 
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import math_utils, data_utils, utils
+from utils_package import math_utils, cifar_utils, utils
 
 
 class BinaryTreeNode:
@@ -66,6 +68,9 @@ class BinaryTree:
         return node
 
     def search_tree(self, item: list, result_size: int = None, max_depth: int = None):
+        if not isinstance(item, list):
+            item = list(item)
+
         node: BinaryTreeNode = self._root
         for i, unit in enumerate(item):
             if i == self._tree_depth or len(node.data) == 1 or \
@@ -93,13 +98,13 @@ class BinaryTree:
 
 
 def main():
-    depth = 3
+    depth = 32
     bin_quantile = 0.2
     model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 
-    dataloader = data_utils.get_cifar10_dataloader()
+    dataloader = cifar_utils.get_cifar10_dataloader()
     device = utils.get_device()
-    data = data_utils.load_cifar10(dataloader)
+    data = cifar_utils.load_cifar10(dataloader)
     print('Data loaded')
 
     autoencoder: Autoencoder = torch.load(model_pickle, map_location=device)
@@ -118,4 +123,6 @@ def main():
 
 
 if __name__ == '__main__':
+    start_time = time()
     main()
+    print(f'Total run time: {timedelta(seconds=time() - start_time)}')

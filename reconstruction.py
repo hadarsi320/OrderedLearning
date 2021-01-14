@@ -7,14 +7,14 @@ import torch
 from tqdm import tqdm
 
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import data_utils, utils
+from utils_package import cifar_utils, utils
 
 
 def main():
     # Reconstructing
     model_pickle = f'models/nestedDropoutAutoencoder_shallow_21-01-13__10-31-45_dict.pt'
 
-    dataloader = data_utils.get_cifar10_dataloader(1000)
+    dataloader = cifar_utils.get_cifar10_dataloader(1000)
     device = utils.get_device()
     autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'), map_location=device)['autoencoder']
     autoencoder.eval()

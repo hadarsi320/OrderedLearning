@@ -11,7 +11,7 @@ from torch.distributions import Geometric
 from tqdm import tqdm
 
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import data_utils, utils, nn_utils
+from utils_package import cifar_utils, utils, nn_utils
 
 
 def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Tensor, unit: int, succession: list,
@@ -229,7 +229,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, n
     model_params = locals()
     deep_str = 'deep' if deep else 'shallow'
 
-    dataloader = data_utils.get_cifar10_dataloader(batch_size)
+    dataloader = cifar_utils.get_cifar10_dataloader(batch_size)
     autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
 
     if nested_dropout:

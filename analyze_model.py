@@ -3,12 +3,12 @@ import os
 import torch
 import torch.nn.functional as F
 
-from utils_package import utils, data_utils, nn_utils
+from utils_package import utils, cifar_utils, nn_utils
 
 
 def main():
     device = utils.get_device()
-    dataloader = data_utils.get_cifar10_dataloader(1000)
+    dataloader = cifar_utils.get_cifar10_dataloader(1000)
 
     losses_dict = {}
     for file in os.listdir('models/'):
