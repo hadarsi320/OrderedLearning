@@ -98,11 +98,11 @@ class BinaryTree:
 
 
 def main():
-    depth = 32
+    depth = 64
     bin_quantile = 0.2
     model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 
-    dataloader = cifar_utils.get_cifar10_dataloader()
+    dataloader = cifar_utils.get_cifar10_dataloader(download=True)
     device = utils.get_device()
     data = cifar_utils.load_cifar10(dataloader)
     print('Data loaded')
@@ -120,6 +120,7 @@ def main():
     print(f'Binary tree created, with {binary_tree.get_num_nodes():,} nodes')
     pickle.dump({'binary tree': binary_tree, 'data_repr': data_repr},
                 open(f'pickles/binary_tree_{depth}.pkl', 'wb'))
+    print('The binary tree has been saved')
 
 
 if __name__ == '__main__':
