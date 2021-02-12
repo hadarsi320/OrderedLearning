@@ -3,12 +3,13 @@ import os
 import torch
 import torch.nn.functional as F
 
-from utils_package import utils, data_utils, nn_utils
+from utils_package import utils, nn_utils
+from data import cifar10
 
 
 def main():
     device = utils.get_device()
-    dataloader = data_utils.get_cifar10_dataloader(1000)
+    dataloader = cifar10.get_cifar10_dataloader(1000)
 
     for file in os.listdir('models/'):
         if file.endswith('pt'):

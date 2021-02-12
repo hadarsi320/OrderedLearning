@@ -1,7 +1,6 @@
 import itertools
 import os
-from datetime import datetime, timedelta
-from time import time
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,14 +10,14 @@ from torch.distributions import Geometric
 from tqdm import tqdm
 
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import data_utils, utils, nn_utils
+from utils_package import utils, nn_utils
+from data import cifar10
 
 
 def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Tensor, unit: int, succession: list,
                            eps: float, bound: int) -> bool:
     new_repr = autoencoder.get_representation(batch)
 
-    # difference = linalg.norm((new_repr - old_repr)[:, unit]) / len(batch)
     difference = linalg.norm((new_repr - old_repr)[:, :unit + 1]) / (len(batch) * (unit + 1))
     if difference <= eps:
         succession[0] += 1
@@ -141,7 +140,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, n
     model_name = f'nestedDropoutAutoencoder_{deep_str}_{activation}_' \
                  + datetime.now().strftime('%y-%m-%d__%H-%M-%S')
 
-    dataloader = data_utils.get_cifar10_dataloader(batch_size)
+    dataloader = cifar10.get_cifar10_dataloader(batch_size)
     autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
     # print(f'Epochs: {epochs} Batch size {batch_size} Number of batches {len(dataloader)}\n\n')
     # print('The number of the model\'s parameters: {:,}'.format(sum(p.numel() for p in autoencoder.parameters())))
@@ -166,9 +165,3 @@ def main():
     parameters = itertools.product(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, p)
     for params in parameters:
         test_params(*params)
-
-
-if __name__ == '__main__':
-    start_time = time()
-    main()
-    print(f'Total run time: {timedelta(seconds=time() - start_time)}')
