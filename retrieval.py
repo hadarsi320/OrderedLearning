@@ -6,7 +6,7 @@ import torch
 
 from data_structures.binary_tree import BinaryTree
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import utils
+from utils import gen_utils
 from data import cifar10
 
 import matplotlib.pyplot as plt
@@ -26,7 +26,7 @@ def eval_retrieval_method(data_repr: torch.Tensor, retrieval_method):
         _times = []
         for sample in data_repr:
             start = time()
-            retrieval_method(sample, i+1)
+            retrieval_method(sample, i + 1)
             _times.append(time() - start)
         times.append(np.average(_times))
     return times
@@ -37,23 +37,25 @@ def main():
     binary_tree_pickle = 'pickles/binary_tree_50.pkl'
 
     dataloader = cifar10.get_cifar10_dataloader(1000)
-    device = utils.get_device()
+    device = gen_utils.get_device()
     autoencoder: Autoencoder = torch.load(model_pickle, map_location=device)
     data = torch.cat([sample for sample, _ in dataloader])
-    data_repr = utils.get_data_representation(autoencoder, dataloader, device).cpu()
-    binarized_repr = utils.binarize_data(data_repr, bin_quantile=0.2)
+    data_repr = gen_utils.get_data_representation(autoencoder, dataloader, device).cpu()
+    binarized_repr = gen_utils.binarize_data(data_repr, bin_quantile=0.2)
 
     binary_tree: BinaryTree = pickle.load(open(binary_tree_pickle, 'rb'))
 
     def linear_scan_i(sample, i):
         return linear_scan(sample[:i], data, binarized_repr[:, i])
+
     linear_scan_times = eval_retrieval_method(binarized_repr, linear_scan_i)
 
     def tree_search_i(sample, i):
         return binary_tree.search_tree(sample, depth=i)
+
     tree_search_times = eval_retrieval_method(binarized_repr, tree_search_i)
 
-    pickle.dump((linear_scan_times, tree_search_times), open(f'pickles/search_times_{utils.current_time()}.pkl', 'wb'))
+    pickle.dump((linear_scan_times, tree_search_times), open(f'pickles/search_times_{gen_utils.current_time()}.pkl', 'wb'))
 
     plt.plot(range(1, autoencoder.repr_dim + 1), linear_scan_times, label='Linear Scan')
     plt.plot(range(1, autoencoder.repr_dim + 1), tree_search_times, label='Tree Search')

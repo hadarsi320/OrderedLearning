@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import utils
+from utils import gen_utils
 from data import cifar10
 
 
@@ -14,7 +14,7 @@ def main():
     model_pickle = f'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-12__04-17-04_dict.pt'
 
     dataloader = cifar10.get_cifar10_dataloader(1000)
-    device = utils.get_device()
+    device = gen_utils.get_device()
     autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'), map_location=device)['autoencoder']
     autoencoder.eval()
 
@@ -33,7 +33,7 @@ def main():
         reconstruction_loss.append(np.mean(_rec_loss))
 
     pickle.dump((reconstruction_loss, repr_dim),
-                open(f'pickles/reconstruction_loss_{utils.current_time()}.pkl', 'wb'))
+                open(f'pickles/reconstruction_loss_{gen_utils.current_time()}.pkl', 'wb'))
 
     plt.plot(range(1, repr_dim + 1), reconstruction_loss)
     plt.xlabel('Representation Bytes')

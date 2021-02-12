@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from utils_package import nn_utils
+from utils import nn_utils
 
 
 class Autoencoder(nn.Module):

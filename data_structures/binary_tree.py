@@ -3,7 +3,7 @@ import pickle
 import torch
 
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import math_utils, utils
+from utils import math_utils, gen_utils
 from data import cifar10
 
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 
     dataloader = cifar10.get_cifar10_dataloader()
-    device = utils.get_device()
+    device = gen_utils.get_device()
     autoencoder: Autoencoder = torch.load(model_pickle, map_location=device)
     autoencoder.eval()
 
@@ -98,8 +98,8 @@ if __name__ == '__main__':
     data = cifar10.load_cifar10(dataloader)
     print('data loaded')
 
-    representation = utils.get_data_representation(autoencoder, dataloader, device)
-    data_repr = utils.binarize_data(representation, bin_quantile)
+    representation = gen_utils.get_data_representation(autoencoder, dataloader, device)
+    data_repr = gen_utils.binarize_data(representation, bin_quantile)
     print('data representation created')
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)

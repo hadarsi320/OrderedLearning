@@ -10,7 +10,7 @@ from torch.distributions import Geometric
 from tqdm import tqdm
 
 from nueral_networks.autoencoders import Autoencoder
-from utils_package import utils, nn_utils
+from utils import gen_utils, nn_utils
 from data import cifar10
 
 
@@ -47,7 +47,7 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
     corrupt_layer = nn.Dropout(p=corrupt_p)
 
     autoencoder.train(True)
-    device = utils.get_device()
+    device = gen_utils.get_device()
     autoencoder.to(device)
 
     optimizer = optim.Adam(autoencoder.parameters(), lr=learning_rate)
@@ -99,9 +99,9 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
             if save_plots:
                 kwargs['savefig'] = f'plots/{model_name}/epoch_{epoch + 1}.png'
             if save_plots or show_plots:
-                utils.plot_repr_var(autoencoder, train_loader, device, show=show_plots,
-                                    title=f'Representation variance- epoch {epoch + 1}',
-                                    **kwargs)
+                gen_utils.plot_repr_var(autoencoder, train_loader, device, show=show_plots,
+                                        title=f'Representation variance- epoch {epoch + 1}',
+                                        **kwargs)
             if save_models:
                 torch.save(autoencoder, f'checkpoints/{model_name}/epoch_{epoch + 1}.pt')
 
@@ -114,8 +114,8 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
     if save_plots:
         kwargs['savefig'] = f'plots/{model_name}/final.png'
     if save_plots or show_plots:
-        utils.plot_repr_var(autoencoder, train_loader, device,
-                            title='Final representation variance', show=show_plots, **kwargs)
+        gen_utils.plot_repr_var(autoencoder, train_loader, device,
+                                title='Final representation variance', show=show_plots, **kwargs)
 
         plt.clf()
         plt.plot(losses)
