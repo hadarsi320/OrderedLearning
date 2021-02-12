@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from data_structures.binary_tree import BinaryTree
-from nueral_networks.autoencoders import Autoencoder
+from models.autoencoder import Autoencoder
 from utils import gen_utils
 from data import cifar10
 

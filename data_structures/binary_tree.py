@@ -2,7 +2,7 @@ import pickle
 
 import torch
 
-from nueral_networks.autoencoders import Autoencoder
+from models.autoencoder import Autoencoder
 from utils import math_utils, gen_utils
 from data import cifar10
 

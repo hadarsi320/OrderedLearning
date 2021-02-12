@@ -9,7 +9,7 @@ from torch import optim, nn, linalg
 from torch.distributions import Geometric
 from tqdm import tqdm
 
-from nueral_networks.autoencoders import Autoencoder
+from models.autoencoder import Autoencoder
 from utils import gen_utils, nn_utils
 from data import cifar10
 
