@@ -3,8 +3,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch
 
-CIFAR10_MEAN = [0.49139968, 0.48215841, 0.44653091]
-CIFAR10_STD = [0.24703223, 0.24348513, 0.26158784]
+from .constants import CIFAR10_MEAN, CIFAR10_STD
 
 
 def get_cifar10_dataloader(batch_size=1):
