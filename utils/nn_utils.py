@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch import linalg
 
 
-def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout=True, dropout_p=0.2):
+def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout_p=0.2):
     assert start_dim != end_dim
 
     dimensions = []
@@ -30,7 +30,7 @@ def create_sequential(start_dim: int, end_dim: int, activation: str = None, drop
         layers.append(nn.Linear(last_dim, dim))
         if activation is not None:
             layers.append(getattr(nn, activation)())
-        if dropout:
+        if dropout_p is not None:
             layers.append(nn.Dropout(p=dropout_p))
         last_dim = dim
     layers.append(nn.Linear(last_dim, end_dim))
