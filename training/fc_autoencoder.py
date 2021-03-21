@@ -16,7 +16,7 @@ from data import cifar10
 
 def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Tensor, unit: int, succession: list,
                            eps: float, bound: int) -> bool:
-    new_repr = autoencoder.get_representation(batch)
+    new_repr = autoencoder.encode(batch)
 
     difference = linalg.norm((new_repr - old_repr)[:, :unit + 1]) / (len(batch) * (unit + 1))
     if difference <= eps:
@@ -67,9 +67,9 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, train_loader, learn
                 batch = corrupt_layer(batch)
 
             # run through the model and compute l2 loss
-            representation = autoencoder.get_representation(batch)
+            representation = autoencoder.encode(batch)
             representation = nn_utils.nested_dropout(representation, nested_dropout_dist, converged_unit)
-            reconstruction = autoencoder.get_reconstructions(representation)
+            reconstruction = autoencoder.decode(representation)
             loss = loss_function(batch, reconstruction)
 
             # code invariance

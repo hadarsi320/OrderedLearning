@@ -25,10 +25,10 @@ def main():
         _rec_loss = []
         for sample, _ in dataloader:
             sample = sample.to(device)
-            sample_rep = autoencoder.get_representation(sample)
+            sample_rep = autoencoder.encode(sample)
             cut_repr = torch.zeros_like(sample_rep)
             cut_repr[:, :i + 1] = sample_rep[:, :i + 1]
-            reconst = autoencoder.get_reconstructions(cut_repr)
+            reconst = autoencoder.decode(cut_repr)
             _rec_loss.append(torch.linalg.norm(sample - reconst).item())
         reconstruction_loss.append(np.mean(_rec_loss))
 
