@@ -6,15 +6,16 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from nueral_networks.autoencoders import Autoencoder
-from utils_package import cifar_utils, utils
+import utils
+from data import cifar10
+from models.autoencoder import Autoencoder
 
 
 def main():
     # Reconstructing
     model_pickle = f'models/nestedDropoutAutoencoder_shallow_21-01-13__10-31-45_dict.pt'
 
-    dataloader = cifar_utils.get_cifar10_dataloader(1000)
+    dataloader = cifar10.get_dataloader(1000)
     device = utils.get_device()
     autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'), map_location=device)['autoencoder']
     autoencoder.eval()
@@ -27,11 +28,12 @@ def main():
         losses = []
         for sample, _ in dataloader:
             sample = sample.to(device)
-            sample_repr = autoencoder.encode(sample)
-            sample_repr[:, index + 1:] = 0
-            reconst = autoencoder.decode(sample_repr)
-            losses.append(torch.mean((sample - reconst) ** 2).item())
-        reconst_loss[i] = np.mean(losses)
+            sample_rep = autoencoder.encode(sample)
+            cut_repr = torch.zeros_like(sample_rep)
+            cut_repr[:, :i + 1] = sample_rep[:, :i + 1]
+            reconst = autoencoder.decode(cut_repr)
+            _rec_loss.append(torch.linalg.norm(sample - reconst).item())
+        reconstruction_loss.append(np.mean(_rec_loss))
 
     pickle.dump((reconst_loss, repr_dim),
                 open(f'pickles/reconstruction_loss_{utils.current_time()}.pkl', 'wb'))

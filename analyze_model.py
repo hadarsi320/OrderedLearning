@@ -3,12 +3,13 @@ import os
 import torch
 import torch.nn.functional as F
 
-from utils_package import utils, cifar_utils, nn_utils
+import utils
+from data import cifar10
 
 
 def main():
     device = utils.get_device()
-    dataloader = cifar_utils.get_cifar10_dataloader(1000)
+    dataloader = cifar10.get_dataloader(1000)
 
     losses_dict = {}
     for file in os.listdir('models/'):
@@ -23,10 +24,11 @@ def main():
 
             if 'converged_unit' in model_params:
                 print(f'\tconverged unit: {model_dict["converged_unit"]}')
-            loss = nn_utils.get_model_loss(autoencoder, dataloader, lambda x, y, res: F.mse_loss(x, res), device)
+            loss = utils.get_model_loss(autoencoder, dataloader, lambda x, y, res: F.mse_loss(x, res), device)
             print(f'\tmodel loss: {loss:.2f}')
             print()
 
+            utils.plot_repr_var(autoencoder, dataloader, device, title=file, show=True)
             losses_dict[file] = loss
 
     best_models = sorted(losses_dict, key=lambda x: losses_dict[x])[:5]

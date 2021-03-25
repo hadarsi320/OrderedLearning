@@ -1,4 +1,4 @@
 /checkpoints/
 /testing.py
-models/
+trained_models/
 pickles/

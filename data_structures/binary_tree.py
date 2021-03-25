@@ -4,8 +4,9 @@ from time import time
 
 import torch
 
-from nueral_networks.autoencoders import Autoencoder
-from utils_package import math_utils, cifar_utils, utils
+from models.autoencoder import Autoencoder
+import utils
+from data import cifar10
 
 
 class BinaryTreeNode:
@@ -52,7 +53,7 @@ class BinaryTree:
 
     def _generate_node(self, mask, depth, parent):
         self._num_nodes += 1
-        if math_utils.is_power_of_2(self._num_nodes):
+        if utils.is_power_of_2(self._num_nodes):
             print(f'Creating node {self._num_nodes:,} out of {2 ** (self._tree_depth + 1) - 1:,}')
 
         node = BinaryTreeNode(mask, depth, parent)
@@ -102,9 +103,9 @@ def main():
     bin_quantile = 0.2
     model_pickle = f'models/nestedDropoutAutoencoder_deep_ReLU_21-01-07__01-18-13.pkl'
 
-    dataloader = cifar_utils.get_cifar10_dataloader(download=True)
+    dataloader = cifar10.get_dataloader(download=True)
     device = utils.get_device()
-    data = cifar_utils.load_cifar10(dataloader)
+    data = cifar10.load_data(dataloader)
     print('Data loaded')
 
     autoencoder: Autoencoder = torch.load(model_pickle, map_location=device)
@@ -112,8 +113,8 @@ def main():
     print('Model loaded')
 
     representation = utils.get_data_representation(autoencoder, dataloader, device)
-    data_repr = utils.binarize_data(representation, bin_quantile).cpu()
     del autoencoder
+    data_repr = utils.binarize_data(representation, bin_quantile).cpu()
     print('Data representation created')
 
     binary_tree = BinaryTree(data, data_repr, tree_depth=depth)

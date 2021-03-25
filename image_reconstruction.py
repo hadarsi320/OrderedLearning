@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import torch
 
-from nueral_networks.autoencoders import Autoencoder
-from utils_package import cifar_utils, utils
+from models.autoencoder import Autoencoder
+import utils
+from data import cifar10
 
 
 @torch.no_grad()
@@ -16,10 +17,7 @@ def main():
     model: Autoencoder = torch.load(model_pickle, map_location=device)['autoencoder']
     model.eval()
 
-    dataset = cifar_utils.get_cifar10_dataloader().dataset
-
-    def restore(im: torch.Tensor):
-        return utils.restore_image(im.cpu().view(3, 32, 32), cifar_utils.CIFAR10_MEAN, cifar_utils.CIFAR10_STD)
+    dataset = cifar10.get_dataloader().dataset
 
     plt.tight_layout()
     fig, axes = plt.subplots(ncols=num_images, nrows=len(code_lengths), squeeze=False, figsize=(12, 12))
@@ -37,7 +35,7 @@ def main():
                     encoding_ = torch.zeros_like(encoding)
                     encoding_[:code_length] = encoding[:code_length]
                 image = model.decode(encoding_)
-            axis[i].imshow(restore(image))
+            axis[i].imshow(cifar10.restore(image))
             axis[i].set_xticks([])
             axis[i].set_yticks([])
             if i == 0:

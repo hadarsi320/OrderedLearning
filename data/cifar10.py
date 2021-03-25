@@ -3,13 +3,11 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from utils_package import utils
-
-CIFAR10_MEAN = [0.49139968, 0.48215841, 0.44653091]
-CIFAR10_STD = [0.24703223, 0.24348513, 0.26158784]
+from .constants import CIFAR10_MEAN, CIFAR10_STD
+import utils
 
 
-def get_cifar10_dataloader(batch_size=1, download=False):
+def get_dataloader(batch_size=1, download=False):
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
                                     transforms.Lambda(lambda t: t.view(-1))])
@@ -23,9 +21,9 @@ def get_cifar10_dataloader(batch_size=1, download=False):
     return dataloader
 
 
-def load_cifar10(dataloader=None):
+def load_data(dataloader=None):
     if dataloader is None:
-        dataloader = get_cifar10_dataloader()
+        dataloader = get_dataloader()
     return torch.cat([sample for sample, _ in dataloader])
 
 

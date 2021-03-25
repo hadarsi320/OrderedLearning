@@ -1,7 +1,6 @@
 import itertools
 import os
-from datetime import datetime, timedelta
-from time import time
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,15 +9,15 @@ from torch import optim, nn, linalg
 from torch.distributions import Geometric
 from tqdm import tqdm
 
-from nueral_networks.autoencoders import Autoencoder
-from utils_package import cifar_utils, utils, nn_utils
+import utils
+from models.autoencoder import Autoencoder
+from data import cifar10
 
 
 def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Tensor, unit: int, succession: list,
                            eps: float, bound: int) -> bool:
     new_repr = autoencoder.encode(batch)
 
-    # difference = linalg.norm((new_repr - old_repr)[:, unit]) / len(batch)
     difference = linalg.norm((new_repr - old_repr)[:, :unit + 1]) / (len(batch) * (unit + 1))
     if difference <= eps:
         succession[0] += 1
@@ -68,7 +67,7 @@ def fit_vanilla_autoencoder(autoencoder: Autoencoder, dataloader, learning_rate,
 
             # code invariance
             if demand_code_invariance:
-                code_variance = nn_utils.estimate_code_variance(autoencoder, batch, representation)
+                code_variance = utils.estimate_code_variance(autoencoder, batch, representation)
                 loss += code_variance
 
             loss.backward()
@@ -156,13 +155,13 @@ def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, dataloader, learnin
 
             # run through the model and compute l2 loss
             representation = autoencoder.encode(batch)
-            representation = nn_utils.nested_dropout(representation, nested_dropout_dist, converged_unit)
+            representation = utils.nested_dropout(representation, nested_dropout_dist, converged_unit)
             reconstruction = autoencoder.decode(representation)
             loss = loss_function(batch, reconstruction)
 
             # code invariance
             if demand_code_invariance:
-                code_variance = nn_utils.estimate_code_variance(autoencoder, batch, representation)
+                code_variance = utils.estimate_code_variance(autoencoder, batch, representation)
                 loss += code_variance
 
             loss.backward()
@@ -229,7 +228,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, n
     model_params = locals()
     deep_str = 'deep' if deep else 'shallow'
 
-    dataloader = cifar_utils.get_cifar10_dataloader(batch_size)
+    dataloader = cifar10.get_dataloader(batch_size)
     autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
 
     if nested_dropout:
@@ -264,9 +263,3 @@ def main():
     #     test_params(*params, nested_dropout=False)
 
     test_params(1000, 1e-3, None, None, False, 1024, 500, None, nested_dropout=False)
-
-
-if __name__ == '__main__':
-    start_time = time()
-    main()
-    print(f'Total run time: {timedelta(seconds=time() - start_time)}')
