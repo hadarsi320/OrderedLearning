@@ -4,7 +4,7 @@ from time import time
 
 import torch
 
-from models.autoencoder import Autoencoder
+from models.autoencoders import Autoencoder
 import utils
 from data import cifar10
 

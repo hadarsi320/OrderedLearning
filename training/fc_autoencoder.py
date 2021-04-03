@@ -10,7 +10,7 @@ from torch.distributions import Geometric
 from tqdm import tqdm
 
 import utils
-from models.autoencoder import Autoencoder
+from models.autoencoders import Autoencoder
 from data import cifar10
 
 

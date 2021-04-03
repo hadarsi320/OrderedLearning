@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 import utils
 from data import cifar10
-from models.autoencoder import Autoencoder
+from models.autoencoders import Autoencoder
 
 
 def main():
