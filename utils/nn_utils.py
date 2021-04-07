@@ -71,3 +71,8 @@ def get_model_loss(model, dataloader, loss_function, device):
         res = model(x)
         losses.append(loss_function(x, y, res).item())
     return np.average(losses)
+
+
+def save_model(model, optimizer, file, **kwargs):
+    save_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), **kwargs}
+    torch.save(save_dict, file)

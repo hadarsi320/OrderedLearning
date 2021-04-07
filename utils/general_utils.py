@@ -44,7 +44,7 @@ def plot_repr_var(autoencoder, dataloader, device: torch.device, scale='log', sh
 
 
 def current_time():
-    return datetime.now().strftime('%y-%m-%d__%H-%M-%S')
+    return datetime.now().strftime('%y-%m-%d--%H-%M-%S')
 
 
 def get_device():
@@ -53,6 +53,3 @@ def get_device():
             return torch.device('cuda:7')
         return torch.device('cuda')
     return torch.device('cpu')
-
-
-# TODO create a function which saves a model in a dir with a log file

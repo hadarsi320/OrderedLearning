@@ -113,7 +113,6 @@ def fit_vanilla_autoencoder(autoencoder: Autoencoder, dataloader, learning_rate,
         torch.save(autoencoder, f'models/{model_name}.pt')
 
     output = {'autoencoder': autoencoder, 'losses': losses, 'optimizer_state': optimizer.state_dict()}
-
     return output
 
 
