@@ -75,4 +75,8 @@ def get_model_loss(model, dataloader, loss_function, device):
 
 def save_model(model, optimizer, file, **kwargs):
     save_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), **kwargs}
-    torch.save(save_dict, file)
+    torch.save(save_dict, f'{file}.pt')
+
+    with open(f'{file}.txt', 'w') as f:
+        for key in kwargs:
+            f.write(f'{key}: {kwargs[key]}\n')
