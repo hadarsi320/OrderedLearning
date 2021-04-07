@@ -10,7 +10,7 @@ from torch.distributions import Geometric
 from tqdm import tqdm
 
 import utils
-from models.autoencoders import Autoencoder
+from models.autoencoders import FCAutoencoder
 from data import cifar10
 
 
@@ -30,7 +30,7 @@ def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Ten
     return False
 
 
-def fit_vanilla_autoencoder(autoencoder: Autoencoder, dataloader, learning_rate, epochs, model_name,
+def fit_vanilla_autoencoder(autoencoder: FCAutoencoder, dataloader, learning_rate, epochs, model_name,
                             corrupt_input=True, corrupt_p=0.1, demand_code_invariance=True, epoch_print=5,
                             save_plots=True, save_models=True, show_plots=False):
     if save_plots:
@@ -116,7 +116,7 @@ def fit_vanilla_autoencoder(autoencoder: Autoencoder, dataloader, learning_rate,
     return output
 
 
-def fit_nested_dropout_autoencoder(autoencoder: Autoencoder, dataloader, learning_rate, epochs, model_name,
+def fit_nested_dropout_autoencoder(autoencoder: FCAutoencoder, dataloader, learning_rate, epochs, model_name,
                                    nested_dropout_p=0.1, eps=1e-2, bound=20, corrupt_input=True, corrupt_p=0.1,
                                    demand_code_invariance=True, epoch_print=5, save_plots=True, save_models=True,
                                    show_plots=False):
@@ -228,7 +228,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, n
     deep_str = 'deep' if deep else 'shallow'
 
     dataloader = cifar10.get_dataloader(batch_size)
-    autoencoder = Autoencoder(3072, repr_dim, deep=deep, activation=activation)
+    autoencoder = FCAutoencoder(3072, repr_dim, deep=deep, activation=activation)
 
     if nested_dropout:
         model_name = f'nestedDropoutAutoencoder_{deep_str}_{utils.current_time()}'
