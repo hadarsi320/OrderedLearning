@@ -1,11 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 
-import torch
 import torch.nn as nn
-from torch import linalg
-from torch.distributions import Geometric
 
 import utils
+from .layers import *
+
+__all__ = ['Autoencoder', 'FCAutoencoder', 'ConvAutoencoder', 'NestedDropoutAutoencoder']
 
 
 class Autoencoder(ABC, nn.Module):
@@ -13,17 +13,18 @@ class Autoencoder(ABC, nn.Module):
         super(Autoencoder, self).__init__()
         pass
 
-    @abstractmethod
     def forward(self, x):
-        pass
+        x = self.encode(x)
+        x = self.decode(x)
+        return x
 
-    @abstractmethod
     def encode(self, x):
-        pass
+        x = self._encoder(x)
+        return x
 
-    @abstractmethod
     def decode(self, x):
-        pass
+        x = self._decoder(x)
+        return x
 
 
 class FCAutoencoder(Autoencoder):
@@ -40,17 +41,6 @@ class FCAutoencoder(Autoencoder):
         else:
             self._encoder = nn.Linear(input_dim, representation_dim)
             self._decoder = nn.Linear(representation_dim, input_dim)
-
-    def forward(self, x):
-        x = self.encode(x)
-        x = self.decode(x)
-        return x
-
-    def encode(self, x):
-        return self._encoder(x)
-
-    def decode(self, x):
-        return self._decoder(x)
 
 
 class ConvAutoencoder(Autoencoder):
@@ -79,77 +69,38 @@ class ConvAutoencoder(Autoencoder):
         return x
 
 
-class NestedDropoutAutoencoder(Autoencoder):  # TODO implement
-    def __init__(self, autoencoder: Autoencoder, dropout_layer=None, tol=1e-3, sequence_bound=10,
-                 distribution=Geometric, p=0.1):
+class NestedDropoutAutoencoder(Autoencoder):
+    def __init__(self, autoencoder: Autoencoder, dropout_depth=None, **kwargs):
         super(NestedDropoutAutoencoder, self).__init__()
-        self.autoencoder = autoencoder
         self._encoder = autoencoder._encoder
         self._decoder = autoencoder._decoder
-        self.dropout_layer = dropout_layer
-        self.dropout_dim = None
-        self.converged_unit = 0
-        self.has_converged = False
-        self.old_repr = None
-        self.tol = tol
-        self.sequence = 0
-        self.max_sequence = sequence_bound
-        self.distribution = distribution(p)
+        self._dropout_layer = self.add_nested_dropout(dropout_depth, **kwargs)
 
-    def forward(self, x):
-        x = self.encode(x)
-        if self.dropout_layer is None and self.training:
-            x = self.apply_nested_dropout(x)
-        x = self.decode(x)
-        return x
-
-    def encode(self, x):
-        i = 0
-        for layer in self._encoder:
-            x = layer(x)
-            if self.dropout_layer is not None and self.training:
-                if isinstance(layer, nn.Conv2d):
-                    if i == self.dropout_layer:
-                        x = self.apply_nested_dropout(x)
-                    else:
-                        i += 1
-        return x
-
-    def decode(self, x):
-        for layer in self._decoder:
-            x = layer(x)
-        return x
-
-    def apply_nested_dropout(self, x):
-        batch_size = x.shape[0]
-        if self.dropout_dim is None:
-            self.dropout_dim = x.shape[1]
-
-        dropout_sample = self.distribution.sample((batch_size,)).type(torch.long)
-        dropout_sample = torch.minimum(dropout_sample, torch.tensor(self.dropout_dim - 1))  # identical to above
-        # dropout_sample[dropout_sample > (dropout_dim - 1)] = dropout_dim - 1
-
-        mask = torch.tensor(torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit)) \
-            .to(x.device)
-        x = mask * x
-        return x
-
-    def check_convergence(self, x):
-        new_repr = self.encode(x)
-
-        difference = linalg.norm((new_repr - self.old_repr)[:, :self.converged_unit + 1]) / \
-                     (len(x) * (self.converged_unit + 1))
-        if difference <= self.tol:
-            self.sequence += 1
+    def add_nested_dropout(self, dropout_depth, **kwargs):
+        nested_dropout_layer = NestedDropout(**kwargs)
+        layers = list(self._encoder.children())
+        if dropout_depth is None:
+            layers.append(nested_dropout_layer)
         else:
-            self.sequence = 0
+            i = 0
+            for j, layer in enumerate(layers):
+                if isinstance(layer, nn.Conv2d):
+                    i += 1
+                    if i == dropout_depth:
+                        layers.insert(j + 1, nested_dropout_layer)
+                        break
 
-        if self.sequence == self.max_sequence:
-            self.sequence = 0
-            self.converged_unit += 1
+        self._encoder = nn.Sequential(*layers)
+        return nested_dropout_layer
 
-        if self.converged_unit == self.input_dim:
-            self.has_converged = True
+    def has_converged(self):
+        return self._dropout_layer.has_converged
+
+    def get_converged_unit(self):
+        return self._dropout_layer.converged_unit
+
+    def get_dropout_dim(self):
+        return self._dropout_layer.dropout_dim
 
 
 def create_cae(activation, filter_size, mode):
@@ -179,7 +130,8 @@ def create_cae(activation, filter_size, mode):
     else:
         raise NotImplementedError()
 
-    return encoder_layers, decoder_layers
+    # return encoder_layers, decoder_layers
+    return nn.Sequential(*encoder_layers), nn.Sequential(*decoder_layers)
 
 
 def create_vgg_ae(activation, mode):
