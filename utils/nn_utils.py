@@ -6,6 +6,8 @@ import torch.nn as nn
 
 from torch import linalg
 
+from models.autoencoders import NestedDropoutAutoencoder
+
 
 def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout_p=0.2):
     assert start_dim != end_dim
@@ -38,6 +40,7 @@ def create_sequential(start_dim: int, end_dim: int, activation: str = None, drop
     return nn.Sequential(*layers)
 
 
+@DeprecationWarning
 def nested_dropout(x: torch.Tensor, nested_dropout_dist, min_neuron: int):
     batch_size = x.shape[0]
     neurons = x.shape[1]
@@ -73,10 +76,14 @@ def get_model_loss(model, dataloader, loss_function, device):
     return np.average(losses)
 
 
-def save_model(model, optimizer, file, **kwargs):
-    save_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), **kwargs}
-    torch.save(save_dict, f'{file}.pt')
+def save_model(model, optimizer, file_name, **kwargs):
+    if isinstance(model, NestedDropoutAutoencoder):
+        kwargs['converged_unit'] = model.converged_unit
+        kwargs['has_converged'] = model.has_converged
 
-    with open(f'{file}.txt', 'w') as f:
+    save_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), **kwargs}
+    torch.save(save_dict, f'{file_name}.pt')
+
+    with open(f'{file_name}.txt', 'w') as f:
         for key in kwargs:
             f.write(f'{key}: {kwargs[key]}\n')
