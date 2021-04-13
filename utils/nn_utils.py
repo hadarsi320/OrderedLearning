@@ -78,7 +78,7 @@ def get_model_loss(model, dataloader, loss_function, device):
 
 def save_model(model, optimizer, file_name, **kwargs):
     if isinstance(model, NestedDropoutAutoencoder):
-        kwargs['converged_unit'] = model.converged_unit
+        kwargs['converged_unit'] = model.get_converged_unit
         kwargs['has_converged'] = model.has_converged
 
     save_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), **kwargs}
@@ -87,3 +87,9 @@ def save_model(model, optimizer, file_name, **kwargs):
     with open(f'{file_name}.txt', 'w') as f:
         for key in kwargs:
             f.write(f'{key}: {kwargs[key]}\n')
+
+
+def fit_dim(tensor: torch.Tensor, target: torch.Tensor):
+    while tensor.dim() < target.dim():
+        tensor = tensor.unsqueeze(-1)
+    return tensor
