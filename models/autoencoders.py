@@ -53,21 +53,6 @@ class ConvAutoencoder(Autoencoder):
         # else:
         #     raise NotImplementedError('Other modes of CAE have not yet been implemented')
 
-    def forward(self, x):
-        x = self.encode(x)
-        x = self.decode(x)
-        return x
-
-    def encode(self, x):
-        for layer in self._encoder:
-            x = layer(x)
-        return x
-
-    def decode(self, x):
-        for layer in self._encoder:
-            x = layer(x)
-        return x
-
 
 class NestedDropoutAutoencoder(Autoencoder):
     def __init__(self, autoencoder: Autoencoder, dropout_depth=None, **kwargs):
