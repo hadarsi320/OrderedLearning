@@ -2,6 +2,8 @@ import torch
 from torch import nn, linalg
 from torch.distributions import Geometric
 
+__all__ = ['NestedDropout']
+
 
 class NestedDropout(nn.Module):
     def __init__(self, tol=1e-3, sequence_bound=10, distribution=Geometric(0.1)):
@@ -23,7 +25,6 @@ class NestedDropout(nn.Module):
 
             dropout_sample = self.distribution.sample((batch_size,)).type(torch.long)
             dropout_sample = torch.minimum(dropout_sample, torch.tensor(self.dropout_dim - 1))  # identical to above
-            # dropout_sample[dropout_sample > (dropout_dim - 1)] = dropout_dim - 1
 
             mask = torch.tensor(torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit)) \
                 .to(x.device)
