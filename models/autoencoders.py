@@ -34,9 +34,9 @@ class FCAutoencoder(Autoencoder):
 
         if deep:
             self._encoder = utils.create_sequential(input_dim, representation_dim,
-                                                       activation=activation, dropout_p=dropout)
+                                                    activation=activation, dropout_p=dropout)
             self._decoder = utils.create_sequential(representation_dim, input_dim,
-                                                       activation=activation, dropout_p=dropout)
+                                                    activation=activation, dropout_p=dropout)
         else:
             self._encoder = nn.Linear(input_dim, representation_dim)
             self._decoder = nn.Linear(representation_dim, input_dim)
@@ -54,7 +54,7 @@ class FCAutoencoder(Autoencoder):
 
 
 class ConvAutoencoder(Autoencoder):
-    def __init__(self, mode='dumb', activation='ReLU', filter_size=2):
+    def __init__(self, mode='A', activation='ReLU', filter_size=2):
         super(ConvAutoencoder, self).__init__()
         self._encoder, self._decoder = create_cae(activation, filter_size, mode)
 
@@ -80,13 +80,14 @@ class ConvAutoencoder(Autoencoder):
 
 
 class NestedDropoutAutoencoder(Autoencoder):  # TODO implement
-    def __init__(self, autoencoder: Autoencoder, input_dim, dropout_layer=None, tol=1e-3, sequence_bound=10,
+    def __init__(self, autoencoder: Autoencoder, dropout_layer=None, tol=1e-3, sequence_bound=10,
                  distribution=Geometric, p=0.1):
         super(NestedDropoutAutoencoder, self).__init__()
+        self.autoencoder = autoencoder
         self._encoder = autoencoder._encoder
         self._decoder = autoencoder._decoder
         self.dropout_layer = dropout_layer
-        self.input_dim = input_dim
+        self.dropout_dim = None
         self.converged_unit = 0
         self.has_converged = False
         self.old_repr = None
@@ -104,10 +105,9 @@ class NestedDropoutAutoencoder(Autoencoder):  # TODO implement
 
     def encode(self, x):
         i = 0
-        for layer in self._autoencoder.encoder:
-            if self.dropout_layer is None:
-                x = layer(x)
-            else:
+        for layer in self._encoder:
+            x = layer(x)
+            if self.dropout_layer is not None and self.training:
                 if isinstance(layer, nn.Conv2d):
                     if i == self.dropout_layer:
                         x = self.apply_nested_dropout(x)
@@ -116,18 +116,23 @@ class NestedDropoutAutoencoder(Autoencoder):  # TODO implement
         return x
 
     def decode(self, x):
-        return self._autoencoder.decode(x)
+        for layer in self._decoder:
+            x = layer(x)
+        return x
 
     def apply_nested_dropout(self, x):
         batch_size = x.shape[0]
-        dropout_dim = x.shape[1]
+        if self.dropout_dim is None:
+            self.dropout_dim = x.shape[1]
 
         dropout_sample = self.distribution.sample((batch_size,)).type(torch.long)
-        dropout_sample = torch.minimum(dropout_sample, dropout_dim)  # identical to above
+        dropout_sample = torch.minimum(dropout_sample, torch.tensor(self.dropout_dim - 1))  # identical to above
         # dropout_sample[dropout_sample > (dropout_dim - 1)] = dropout_dim - 1
 
-        mask = torch.tensor(torch.arange(dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit)).to(x.device)
-        return mask * x
+        mask = torch.tensor(torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit)) \
+            .to(x.device)
+        x = mask * x
+        return x
 
     def check_convergence(self, x):
         new_repr = self.encode(x)
