@@ -2,11 +2,14 @@ import torch
 from torch import nn, linalg
 from torch.distributions import Geometric
 
+import utils
+
 __all__ = ['NestedDropout']
 
 
 class NestedDropout(nn.Module):
     def __init__(self, tol=1e-3, sequence_bound=10, distribution=Geometric(0.1)):
+        # TODO set default parameters
         super(NestedDropout, self).__init__()
         self.tol = tol
         self.sequence = 0
@@ -26,8 +29,9 @@ class NestedDropout(nn.Module):
             dropout_sample = self.distribution.sample((batch_size,)).type(torch.long)
             dropout_sample = torch.minimum(dropout_sample, torch.tensor(self.dropout_dim - 1))  # identical to above
 
-            mask = torch.tensor(torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit)) \
+            mask = (torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit)) \
                 .to(x.device)
+            mask = utils.fit_dim(mask, x)
             x = mask * x
 
             if self.old_repr is None:
@@ -38,10 +42,8 @@ class NestedDropout(nn.Module):
         return x
 
     def check_convergence(self, x):
-        new_repr = self.encode(x)
-
-        difference = linalg.norm((new_repr - self.old_repr)[:, :self.converged_unit + 1]) / \
-                     (len(x) * (self.converged_unit + 1))
+        difference = (linalg.norm((x - self.old_repr)[:, :self.converged_unit + 1]) /
+                      (len(x) * (self.converged_unit + 1)))
         if difference <= self.tol:
             self.sequence += 1
         else:
