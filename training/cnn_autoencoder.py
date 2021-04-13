@@ -5,10 +5,13 @@ from torch import nn, optim
 
 import utils
 from data import cifar10
-from models.autoencoders import Autoencoder, ConvAutoencoder
+from models.autoencoders import Autoencoder, ConvAutoencoder, NestedDropoutAutoencoder
 
 
-def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rate, model_dir, **kwargs):
+def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rate, model_dir, nested_dropout=False,
+                      plateau_limit=10, **kwargs):
+    if nested_dropout:
+        assert isinstance(autoencoder, NestedDropoutAutoencoder)
     batch_print = len(dataloader) // 5
 
     autoencoder.train()
@@ -25,12 +28,12 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
         print(f'\tEpoch {epoch + 1}/{epochs}')
 
         batch_losses = []
-        for i, (batch, _) in enumerate(dataloader):
+        for i, (X, _) in enumerate(dataloader):
             optimizer.zero_grad()
-            batch = batch.to(device)
+            X = X.to(device)
 
-            reconstruction = autoencoder(batch)
-            loss = loss_function(batch, reconstruction)
+            reconstruction = autoencoder(X)
+            loss = loss_function(X, reconstruction)
 
             loss.backward()
             optimizer.step()
@@ -38,6 +41,11 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
             batch_losses.append(loss.item())
             if (i + 1) % batch_print == 0:
                 print(f'Batch {i + 1} loss: {np.average(batch_losses[-batch_print:]):.3f}')
+
+            if nested_dropout:
+                autoencoder.check_convergence(X)
+                if autoencoder.has_converged:
+                    break
 
         epoch_loss = round(np.average(batch_losses), 3)
         losses.append(epoch_loss)
@@ -49,7 +57,7 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
         else:
             plateau += 1
 
-        if plateau == 10:
+        if plateau == plateau_limit:
             break
 
     return autoencoder, losses
