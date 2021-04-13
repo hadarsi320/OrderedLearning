@@ -21,7 +21,7 @@ class NestedDropout(nn.Module):
         self.old_repr = None
 
     def forward(self, x):
-        if self.training:
+        if self.training and not self.has_converged:
             batch_size = x.shape[0]
             if self.dropout_dim is None:
                 self.dropout_dim = x.shape[1]
@@ -43,15 +43,16 @@ class NestedDropout(nn.Module):
 
     def check_convergence(self, x):
         difference = (linalg.norm((x - self.old_repr)[:, :self.converged_unit + 1]) /
-                      (len(x) * (self.converged_unit + 1)))
+                      (x.shape[0] * (self.converged_unit + 1)))
         if difference <= self.tol:
             self.sequence += 1
+            if self.sequence == self.sequence_bound:
+                self.sequence = 0
+                self.converged_unit += 1
+                if self.converged_unit == self.dropout_dim:
+                    self.has_converged = True
         else:
             self.sequence = 0
 
-        if self.sequence == self.sequence_bound:
-            self.sequence = 0
-            self.converged_unit += 1
 
-        if self.converged_unit == self.dropout_dim:
-            self.has_converged = True
+
