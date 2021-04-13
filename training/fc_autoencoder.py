@@ -1,6 +1,4 @@
-import itertools
 import os
-from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,11 +8,14 @@ from torch.distributions import Geometric
 from tqdm import tqdm
 
 import utils
-from models.autoencoders import FCAutoencoder
 from data import cifar10
+from models.autoencoders import FCAutoencoder
 
 
-def check_unit_convergence(autoencoder, batch: torch.Tensor, old_repr: torch.Tensor, unit: int, succession: list,
+def check_unit_convergence(autoencoder,
+                           batch: torch.Tensor,
+                           old_repr: torch.Tensor,
+                           unit: int, succession: list,
                            eps: float, bound: int) -> bool:
     new_repr = autoencoder.encode(batch)
 
