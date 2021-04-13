@@ -53,5 +53,5 @@ class NestedDropout(nn.Module):
             self.sequence = 0
             self.converged_unit += 1
 
-        if self.converged_unit == self.input_dim:
+        if self.converged_unit == self.dropout_dim:
             self.has_converged = True
