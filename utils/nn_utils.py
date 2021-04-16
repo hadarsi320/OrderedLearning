@@ -78,8 +78,8 @@ def get_model_loss(model, dataloader, loss_function, device):
 
 def save_model(model, optimizer, file_name, **kwargs):
     if isinstance(model, NestedDropoutAutoencoder):
-        kwargs['converged_unit'] = model.get_converged_unit
-        kwargs['has_converged'] = model.has_converged
+        kwargs['converged_unit'] = model.get_converged_unit()
+        kwargs['has_converged'] = model.has_converged()
 
     save_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), **kwargs}
     torch.save(save_dict, f'{file_name}.pt')
