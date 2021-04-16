@@ -59,9 +59,9 @@ class NestedDropoutAutoencoder(Autoencoder):
         super(NestedDropoutAutoencoder, self).__init__()
         self._encoder = autoencoder._encoder
         self._decoder = autoencoder._decoder
-        self._dropout_layer = self.add_nested_dropout(dropout_depth, **kwargs)
+        self._dropout_layer = self.add_nested_dropout_layer(dropout_depth, **kwargs)
 
-    def add_nested_dropout(self, dropout_depth, **kwargs):
+    def add_nested_dropout_layer(self, dropout_depth, **kwargs):
         nested_dropout_layer = NestedDropout(**kwargs)
         layers = list(self._encoder.children())
         if dropout_depth is None:
@@ -102,10 +102,12 @@ def create_cae(activation, filter_size, mode):
             new_channels = utils.get_power_successor(channels)
             encoder_layers.append(nn.Conv2d(channels, new_channels, filter_size, filter_size))
             encoder_layers.append(activation_function())
+            encoder_layers.append(nn.BatchNorm2d(new_channels))
 
             if first:
                 first = False
             else:
+                decoder_layers.insert(0, nn.BatchNorm2d(channels))
                 decoder_layers.insert(0, activation_function())
             decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, filter_size, filter_size))
 
