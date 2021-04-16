@@ -29,9 +29,8 @@ class NestedDropout(nn.Module):
             dropout_sample = self.distribution.sample((batch_size,)).type(torch.long)
             dropout_sample = torch.minimum(dropout_sample, torch.tensor(self.dropout_dim - 1))  # identical to above
 
-            mask = (torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit)) \
-                .to(x.device)
-            mask = utils.fit_dim(mask, x)
+            mask = (torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit))
+            mask = utils.fit_dim(mask, x).to(x.device)
             x = mask * x
 
             if self.old_repr is None:
