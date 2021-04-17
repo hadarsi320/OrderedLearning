@@ -8,9 +8,9 @@ from data import cifar10
 from models.autoencoders import Autoencoder, ConvAutoencoder, NestedDropoutAutoencoder
 
 
-def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rate, model_dir, plateau_limit=10,
-                      **kwargs):
+def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rate, model_dir, **kwargs):
     nested_dropout = isinstance(autoencoder, NestedDropoutAutoencoder)
+    plateau_limit = kwargs['plateau_limit'] if 'plateau_limit' in kwargs else 10
     batch_print = len(dataloader) // 5
 
     autoencoder.train()
@@ -26,7 +26,7 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
     best_loss = float('inf')
     plateau = 0
     for epoch in range(epochs):
-        if nested_dropout and epoch != 0:
+        if nested_dropout and epoch > 0:
             print(f'\tEpoch {epoch + 1}/{epochs} '
                   f'({autoencoder.get_converged_unit()}/{autoencoder.get_dropout_dim()} converged units)')
         else:
@@ -72,7 +72,7 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
 def main():
     for filter_size in [2, 4, 8, 16, 32]:
         print(f'\t\tFilter size {filter_size}')
-        epochs = 100
+        epochs = 200
         learning_rate = 1e-3
         tol = 1e-3
         sequence_bound = 100
@@ -87,7 +87,7 @@ def main():
         os.mkdir(model_dir)
 
         train_autoencoder(model, dataloader, epochs, learning_rate, model_dir, filter_size=filter_size, tol=tol,
-                          batch_norm=True, sequence_bound=sequence_bound)
+                          batch_norm=True, sequence_bound=sequence_bound, plateau_limit=None)
 
     # model_dict = torch.load('saves/cae-A-NestedDropoutAutoencoder_21-04-13--15-18-32/model.pt')
     # model = NestedDropoutAutoencoder(ConvAutoencoder(filter_size=model_dict['filter_size']))
