@@ -35,7 +35,7 @@ def main():
                     encoding_ = torch.zeros_like(encoding)
                     encoding_[:code_length] = encoding[:code_length]
                 image = model.decode(encoding_)
-            axis[i].imshow(cifar10.restore(image))
+            axis[i].imshow(cifar10.unnormalize(image))
             axis[i].set_xticks([])
             axis[i].set_yticks([])
             if i == 0:
