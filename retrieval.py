@@ -114,14 +114,14 @@ def retrieve_images():
         fig, axes = plt.subplots(ncols=len(results))
         fig.suptitle(f'Retrieval results at depth {depth}')
         for image, axis in zip(results, axes):
-            axis.imshow(cifar10.restore(image))
+            axis.imshow(cifar10.unnormalize(image))
             axis.set_xticks([])
             axis.set_yticks([])
         plt.savefig(f'plots/retrieval_{seed}_{depth}')
         plt.show()
 
     image = binary_tree.search_tree(list(sample))[0]
-    plt.imshow(cifar10.restore(image))
+    plt.imshow(cifar10.unnormalize(image))
     plt.title('The query image')
     plt.yticks([])
     plt.xticks([])

@@ -7,9 +7,12 @@ from .constants import CIFAR10_MEAN, CIFAR10_STD
 import utils
 
 
-def get_dataloader(batch_size=1, download=False):
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD)])
+def get_dataloader(batch_size=1, download=False, normalize=True):
+    transform_list = [transforms.ToTensor()]
+    if normalize:
+        transform_list.append(transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD))
+
+    transform = transforms.Compose(transform_list)
     dataset = torchvision.datasets.CIFAR10(root=utils.CIFAR10_file, download=download, transform=transform, train=True)
     if batch_size == -1:
         dataloader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
@@ -18,11 +21,11 @@ def get_dataloader(batch_size=1, download=False):
     return dataloader
 
 
-def load_data(dataloader=None):
+def load_data(dataloader=None, normalize=True):
     if dataloader is None:
-        dataloader = get_dataloader()
+        dataloader = get_dataloader(normalize=normalize)
     return torch.cat([sample for sample, _ in dataloader])
 
 
-def restore(im: torch.Tensor):
+def unnormalize(im: torch.Tensor):
     return utils.restore_image(im.cpu().view(3, 32, 32), CIFAR10_MEAN, CIFAR10_STD)
