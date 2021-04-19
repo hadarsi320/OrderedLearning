@@ -3,7 +3,7 @@ from abc import ABC
 import torch.nn as nn
 
 import utils
-from .layers import *
+from models.layers import *
 
 __all__ = ['Autoencoder', 'FCAutoencoder', 'ConvAutoencoder', 'NestedDropoutAutoencoder']
 
@@ -44,39 +44,42 @@ class FCAutoencoder(Autoencoder):
 
 
 class ConvAutoencoder(Autoencoder):
-    def __init__(self, mode='A', activation='ReLU', filter_size=2):
+    def __init__(self, mode='A', dim=32, **kwargs):
         super(ConvAutoencoder, self).__init__()
-        self._encoder, self._decoder = create_cae(activation, filter_size, mode)
-
-        # if mode.startswith('VGG'):
-        #     self._encoder, self._decoder = self.create_vgg(activation, mode)
-        # else:
-        #     raise NotImplementedError('Other modes of CAE have not yet been implemented')
+        self._encoder, self._decoder = create_cae(mode, dim, **kwargs)
 
 
 class NestedDropoutAutoencoder(Autoencoder):
-    def __init__(self, autoencoder: Autoencoder, dropout_depth=None, **kwargs):
+    def __init__(self, autoencoder: Autoencoder, dropout_depth, **kwargs):
         super(NestedDropoutAutoencoder, self).__init__()
         self._encoder = autoencoder._encoder
         self._decoder = autoencoder._decoder
-        self._dropout_layer = self.add_nested_dropout_layer(dropout_depth, **kwargs)
+        self._dropout_layer = self.split_encoder(dropout_depth, **kwargs)
 
-    def add_nested_dropout_layer(self, dropout_depth, **kwargs):
+    def split_encoder(self, dropout_depth, **kwargs):
         nested_dropout_layer = NestedDropout(**kwargs)
-        layers = list(self._encoder.children())
-        if dropout_depth is None:
-            layers.append(nested_dropout_layer)
-        else:
+        encoder_layers = list(self._encoder.children())
+        decoder_layers = list(self._decoder.children())
+        if dropout_depth is not None:
             i = 0
-            for j, layer in enumerate(layers):
+            for j, layer in enumerate(encoder_layers):
                 if isinstance(layer, nn.Conv2d):
                     i += 1
                     if i == dropout_depth:
-                        layers.insert(j + 1, nested_dropout_layer)
+                        self._encoder = nn.Sequential(*encoder_layers[:j + 1])
+                        self._decoder = nn.Sequential(*(encoder_layers[j + 1:] + decoder_layers))
+                        i = None
                         break
+            if i is not None:
+                raise ValueError('Dropout depth is too deep')
 
-        self._encoder = nn.Sequential(*layers)
         return nested_dropout_layer
+
+    def forward(self, x):
+        x = self._encoder(x)
+        x = self._dropout_layer(x)
+        x = self._decoder(x)
+        return x
 
     def has_converged(self):
         return self._dropout_layer.has_converged
@@ -88,36 +91,90 @@ class NestedDropoutAutoencoder(Autoencoder):
         return self._dropout_layer.dropout_dim
 
 
-def create_cae(activation, filter_size, mode):
-    activation_function = nn.Identity if activation is None else getattr(nn, activation)
+def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
+    activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
+    normalized = kwargs.get('normalize_data', True)
+
+    channels = 3
+    dim = starting_dim
+    encoder_layers = []
+    decoder_layers = []
 
     if mode == 'A':
+        filter_size = kwargs.get('filter_size', 2)
+        first = True
+        while dim >= filter_size:
+            new_channels = utils.get_power_successor(channels)
+            encoder_layers.append(nn.Conv2d(channels, new_channels, filter_size, filter_size))
+            encoder_layers.append(activation_function())
+            if batch_norm:
+                encoder_layers.append(nn.BatchNorm2d(new_channels))
+
+            if first:
+                first = False
+                if not normalized:
+                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
+            else:
+                if batch_norm:
+                    decoder_layers.append(nn.BatchNorm2d(channels))
+                decoder_layers.append(activation_function())
+            decoder_layers.append(nn.ConvTranspose2d(new_channels, channels, filter_size, filter_size))
+
+            channels = new_channels
+            dim = dim / filter_size
+        decoder_layers = reversed(decoder_layers)
+
+    elif mode == 'B':
         channels = 3
         dim = 32
         encoder_layers = []
         decoder_layers = []
 
         first = True
-        while dim >= filter_size:
+        while dim >= 2:
             new_channels = utils.get_power_successor(channels)
-            encoder_layers.append(nn.Conv2d(channels, new_channels, filter_size, filter_size))
+            encoder_layers.append(nn.Conv2d(channels, new_channels, 4, stride=2, padding=1))
             encoder_layers.append(activation_function())
-            encoder_layers.append(nn.BatchNorm2d(new_channels))
+            if batch_norm:
+                encoder_layers.append(nn.BatchNorm2d(new_channels))
 
             if first:
                 first = False
             else:
-                decoder_layers.insert(0, nn.BatchNorm2d(channels))
+                if batch_norm:
+                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
                 decoder_layers.insert(0, activation_function())
-            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, filter_size, filter_size))
+            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, 4, stride=2, padding=1))
 
             channels = new_channels
-            dim = dim / filter_size
+            dim = dim / 2
+
+    elif mode == 'C':
+        channels_list = [32, 32, 64, 64]
+
+        encoder_layers = []
+        decoder_layers = []
+        first = True
+        for new_channels in channels_list:
+            encoder_layers.append(nn.Conv2d(channels, new_channels, 4, stride=2, padding=1))
+            encoder_layers.append(activation_function())
+            if batch_norm:
+                encoder_layers.append(nn.BatchNorm2d(new_channels))
+
+            if first:
+                first = False
+            else:
+                if batch_norm:
+                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
+                decoder_layers.insert(0, activation_function())
+            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, 4, stride=2, padding=1))
+
+            channels = new_channels
+            dim = dim / 2
 
     else:
         raise NotImplementedError()
 
-    # return encoder_layers, decoder_layers
     return nn.Sequential(*encoder_layers), nn.Sequential(*decoder_layers)
 
 
