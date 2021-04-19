@@ -8,13 +8,12 @@ __all__ = ['NestedDropout']
 
 
 class NestedDropout(nn.Module):
-    def __init__(self, tol=1e-3, sequence_bound=10, distribution=Geometric(0.1)):
-        # TODO set default parameters
+    def __init__(self, tol=1e-3, sequence_bound=10, p=0.1, **kwargs):
         super(NestedDropout, self).__init__()
         self.tol = tol
         self.sequence = 0
         self.sequence_bound = sequence_bound
-        self.distribution = distribution
+        self.distribution = Geometric(p)
         self.dropout_dim = None
         self.converged_unit = 0
         self.has_converged = False
@@ -27,7 +26,7 @@ class NestedDropout(nn.Module):
                 self.dropout_dim = x.shape[1]
 
             dropout_sample = self.distribution.sample((batch_size,)).type(torch.long)
-            dropout_sample = torch.minimum(dropout_sample, torch.tensor(self.dropout_dim - 1))  # identical to above
+            dropout_sample = torch.minimum(dropout_sample, torch.tensor(self.dropout_dim - 1))
 
             mask = (torch.arange(self.dropout_dim) <= (dropout_sample.unsqueeze(1) + self.converged_unit))
             mask = utils.fit_dim(mask, x).to(x.device)
@@ -52,6 +51,3 @@ class NestedDropout(nn.Module):
                     self.has_converged = True
         else:
             self.sequence = 0
-
-
-
