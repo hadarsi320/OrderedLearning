@@ -3,17 +3,16 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from .constants import CIFAR10_MEAN, CIFAR10_STD
 import utils
 
 
-def get_dataloader(batch_size=1, download=False, normalize=True):
-    transform_list = [transforms.ToTensor()]
+def get_dataloader(batch_size=1, download=False, normalize=False):
+    transform_list = [transforms.ToTensor(), transforms.Resize((64, 64))]
     if normalize:
-        transform_list.append(transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD))
+        raise NotImplementedError('Normalization is yet to be implemented for celeba')
 
     transform = transforms.Compose(transform_list)
-    dataset = torchvision.datasets.CIFAR10(root=utils.datasets_dir, download=download, transform=transform, train=True)
+    dataset = torchvision.datasets.CelebA(root=utils.datasets_dir, download=download, transform=transform, split='all')
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     return dataloader
 
@@ -25,4 +24,5 @@ def load_data(dataloader=None, normalize=True):
 
 
 def unnormalize(im: torch.Tensor):
-    return utils.restore_image(im.cpu().view(3, 32, 32), CIFAR10_MEAN, CIFAR10_STD)
+    raise NotImplementedError('Normalization is yet to be implemented for celeba')
+    # return utils.restore_image(im.cpu().view(3, 32, 32), CIFAR10_MEAN, CIFAR10_STD)
