@@ -8,9 +8,10 @@ from data import cifar10
 from models.autoencoders import Autoencoder, ConvAutoencoder, NestedDropoutAutoencoder
 
 
-def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rate, model_dir, **kwargs):
+def train_autoencoder(autoencoder: Autoencoder, dataloader, model_dir, epochs, learning_rate, **kwargs):
     nested_dropout = isinstance(autoencoder, NestedDropoutAutoencoder)
-    plateau_limit = kwargs['plateau_limit'] if 'plateau_limit' in kwargs else 10
+    plateau_limit = kwargs.get('plateau_limit', 10)
+    loss_criterion = kwargs.get('loss_criterion', 'MSELoss')
     batch_print = len(dataloader) // 5
 
     autoencoder.train()
@@ -20,7 +21,7 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
     optimizer = optim.Adam(params=autoencoder.parameters(), lr=learning_rate)
     if 'optimizer_state' in kwargs:
         optimizer.load_state_dict(kwargs.pop('optimizer_state'))
-    loss_function = nn.MSELoss()
+    loss_function = getattr(nn, loss_criterion)()
 
     losses = []
     best_loss = float('inf')
@@ -38,7 +39,7 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
             X = X.to(device)
 
             X_reconstruction = autoencoder(X)
-            loss = loss_function(X, X_reconstruction)
+            loss = loss_function(X_reconstruction, X)
 
             loss.backward()
             optimizer.step()
@@ -57,14 +58,23 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, epochs, learning_rat
         print(f'\tTotal epoch loss {epoch_loss:.3f}\n')
         if epoch_loss < best_loss:
             best_loss = epoch_loss
-            utils.save_model(autoencoder, optimizer, f'{model_dir}/model', losses=losses, epoch=epoch,
-                             learning_rate=learning_rate, **kwargs)
+            utils.save_model(autoencoder, optimizer, f'{model_dir}/model', losses=losses, best_loss=best_loss,
+                             epoch=epoch, learning_rate=learning_rate, **kwargs)
             plateau = 0
         else:
             plateau += 1
 
         if plateau == plateau_limit or (nested_dropout is True and autoencoder.has_converged()):
             break
+
+    if nested_dropout is True and autoencoder.has_converged():
+        end = 'nested dropout has converged'
+    elif plateau == plateau_limit:
+        end = 'has plateaued'
+    else:
+        end = f'reached max number of epochs ({epochs})'
+    utils.save_model(autoencoder, optimizer, f'{model_dir}/model',
+                     losses=losses, best_loss=best_loss, end=end, learning_rate=learning_rate, **kwargs)
 
     return autoencoder, losses
 
