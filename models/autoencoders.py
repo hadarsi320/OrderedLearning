@@ -50,22 +50,23 @@ class ConvAutoencoder(Autoencoder):
 
 
 class NestedDropoutAutoencoder(Autoencoder):
-    def __init__(self, autoencoder: Autoencoder, dropout_depth, **kwargs):
+    def __init__(self, autoencoder: Autoencoder, dropout_depth=None, **kwargs):
         super(NestedDropoutAutoencoder, self).__init__()
         self._encoder = autoencoder._encoder
         self._decoder = autoencoder._decoder
-        self._dropout_layer = self.split_encoder(dropout_depth, **kwargs)
+        self._dropout_depth = dropout_depth
+        self._dropout_layer = self.split_encoder(**kwargs)
 
-    def split_encoder(self, dropout_depth, **kwargs):
+    def __split_encoder(self, **kwargs):
         nested_dropout_layer = NestedDropout(**kwargs)
         encoder_layers = list(self._encoder.children())
         decoder_layers = list(self._decoder.children())
-        if dropout_depth is not None:
+        if self._dropout_depth is not None:
             i = 0
             for j, layer in enumerate(encoder_layers):
                 if isinstance(layer, nn.Conv2d):
                     i += 1
-                    if i == dropout_depth:
+                    if i == self._dropout_depth:
                         self._encoder = nn.Sequential(*encoder_layers[:j + 1])
                         self._decoder = nn.Sequential(*(encoder_layers[j + 1:] + decoder_layers))
                         i = None

@@ -6,8 +6,6 @@ import torch.nn as nn
 
 from torch import linalg
 
-from models.autoencoders import NestedDropoutAutoencoder
-
 
 def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout_p=0.2):
     assert start_dim != end_dim
@@ -77,7 +75,8 @@ def get_model_loss(model, dataloader, loss_function, device):
 
 
 def save_model(model, optimizer, file_name, **kwargs):
-    if isinstance(model, NestedDropoutAutoencoder):
+    # if isinstance(model, NestedDropoutAutoencoder):
+    if type(model).__name__ == 'NestedDropoutAutoencoder':
         kwargs['converged_unit'] = model.get_converged_unit()
         kwargs['has_converged'] = model.has_converged()
 
