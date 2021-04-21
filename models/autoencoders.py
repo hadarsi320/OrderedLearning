@@ -1,5 +1,6 @@
 from abc import ABC
 
+import torch
 import torch.nn as nn
 
 import utils
@@ -13,16 +14,20 @@ class Autoencoder(ABC, nn.Module):
         super(Autoencoder, self).__init__()
         pass
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         x = self.encode(x)
         x = self.decode(x)
         return x
 
-    def encode(self, x):
+    def encode(self, x: torch.Tensor):
+        if x.dim() == 3:
+            x = x.unsqueeze(0)
         x = self._encoder(x)
         return x
 
-    def decode(self, x):
+    def decode(self, x: torch.Tensor):
+        if x.dim() == 3:
+            x = x.unsqueeze(0)
         x = self._decoder(x)
         return x
 
@@ -55,7 +60,7 @@ class NestedDropoutAutoencoder(Autoencoder):
         self._encoder = autoencoder._encoder
         self._decoder = autoencoder._decoder
         self._dropout_depth = dropout_depth
-        self._dropout_layer = self.split_encoder(**kwargs)
+        self._dropout_layer = self.__split_encoder(**kwargs)
 
     def __split_encoder(self, **kwargs):
         nested_dropout_layer = NestedDropout(**kwargs)
