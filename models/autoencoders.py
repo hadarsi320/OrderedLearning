@@ -141,6 +141,8 @@ def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
 
             if first:
                 first = False
+                if not normalized:
+                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
             else:
                 if batch_norm:
                     decoder_layers.insert(0, nn.BatchNorm2d(channels))
@@ -164,6 +166,8 @@ def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
 
             if first:
                 first = False
+                if not normalized:
+                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
             else:
                 if batch_norm:
                     decoder_layers.insert(0, nn.BatchNorm2d(channels))
