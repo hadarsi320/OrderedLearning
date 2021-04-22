@@ -31,6 +31,20 @@ class Autoencoder(ABC, nn.Module):
         x = self._decoder(x)
         return x
 
+    def get_weights(self, depth):
+        i = 1
+        for child in self._encoder.children():
+            if isinstance(child, (nn.Conv2d, nn.Linear)) and i == depth:
+                return child.weight.data.numpy()
+            i += 1
+
+        for child in self._decoder.children():
+            if isinstance(child, (nn.Conv2d, nn.Linear)) and i == depth:
+                return child.weight.data.numpy()
+            i += 1
+
+        raise ValueError('Depth is too deep')
+
 
 class FCAutoencoder(Autoencoder):
     def __init__(self, input_dim, representation_dim,
