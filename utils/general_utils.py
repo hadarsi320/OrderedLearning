@@ -25,13 +25,19 @@ def binarize_data(data: torch.Tensor, bin_quantile=0.5):
 
 
 @torch.no_grad()
-def plot_repr_var(autoencoder, dataloader, device: torch.device, scale='log', show=False, **kwargs):
+def plot_repr_var(autoencoder, dataloader, scale='log', show=False, **kwargs):
+    device = kwargs.get('device', get_device())
+    autoencoder = autoencoder.to(device)
+
     plt.clf()
     reprs = get_data_representation(autoencoder, dataloader, device)
-    plt.plot(torch.var(reprs, dim=0).to('cpu'))
+    if reprs.dim() == 4:
+        plt.plot(torch.mean(torch.var(reprs, dim=[0]), dim=[1, 2]).cpu())
+    else:
+        plt.plot(torch.var(reprs, dim=0).cpu())
     plt.yscale(scale)
-    plt.xlabel('Units')
-    plt.ylabel('Variance')
+    plt.xlabel(kwargs.get('xlabel', 'Units'))
+    plt.ylabel(kwargs.get('ylabel', 'Variance'))
 
     if 'title' in kwargs:
         plt.title(kwargs.pop('title'))
