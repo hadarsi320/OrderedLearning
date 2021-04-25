@@ -198,20 +198,29 @@ def cae_reconstruction_error_plot(nd_autoencoder, dataloader):
     plt.show()
 
 
-def plot_filters(cae):
-    filter_matrix = cae.get_weights(1)[:3]
+def plot_filters(cae, title=None):
+    filter_matrix = cae.get_weights(1)
+    shape = filter_matrix.shape
+    if shape[0] % 2 == 0:
+        filter_matrix = np.reshape(filter_matrix, (shape[0] // 2, shape[1] * 2, shape[2], shape[3]))
     fig, axes_mat = plt.subplots(nrows=filter_matrix.shape[0], ncols=filter_matrix.shape[1])
-    for filters, axes in zip(filter_matrix, axes_mat):
-        for filter, axis in zip(filters, axes):
-            axis.axis('off')
-            axis.imshow(filter)
+    for i, (filters, axes) in enumerate(zip(filter_matrix, axes_mat)):
+        for j, (filter, axis) in enumerate(zip(filters, axes)):
+            # axis.axis('off')
+            axis.set_xticks([])
+            axis.set_yticks([])
+            if (j - 1) % 3 == 0:
+                axis.set_xlabel(f'{2 * i + j // 3 + 1}')
+            axis.imshow(filter, cmap='plasma')
+    if title is not None:
+        fig.suptitle(title, y=0.92)
     plt.show()
 
 
 def main():
-    vl_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/*cae-C-ConvAutoencoder_21-04-20--16-43-34/'
-    ne_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/*cae-C-NestedDropoutAutoencoder_21-04-20--16-55' \
-                   '-48/'
+    vl_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/cae-D-ConvAutoencoder_21-04-22--09-58-35/'
+    # ne_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/*cae-C-NestedDropoutAutoencoder_21-04-20--16-55-48/'
+    ne_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/cae-D-NestedDropoutAutoencoder_21-04-22--10-01-43/'
 
     save_dict = torch.load(f'{vl_model_dir}/model.pt')
     normalized = save_dict['normalize_data']
@@ -226,10 +235,11 @@ def main():
     nd_autoencoder.eval()
     dataloader = cifar10.get_dataloader(128, normalize=normalized)
 
-    # compare_num_channels(ne_model_dir)
+    # compare_num_channels(model_dir)
     # cae_reconstruction_error_plot(nd_autoencoder, dataloader)
     # utils.plot_repr_var(nd_autoencoder, dataloader, show=True, ylabel='Channels')
-    plot_filters(nd_autoencoder)
+    plot_filters(vl_autoencoder, title='Vanilla Convolutional Autoencoder')
+    plot_filters(nd_autoencoder, title='Nested Dropout Convolutional Autoencoder')
 
 
 if __name__ == '__main__':
