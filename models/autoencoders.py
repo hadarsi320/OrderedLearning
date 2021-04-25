@@ -196,6 +196,32 @@ def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
             channels = new_channels
             dim = dim / 2
 
+    elif mode == 'D':
+        channels_list = [8]
+        conv_args = {'kernel_size': 8, 'stride': 8}
+
+        encoder_layers = []
+        decoder_layers = []
+        first = True
+        for new_channels in channels_list:
+            encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
+            encoder_layers.append(activation_function())
+            if batch_norm:
+                encoder_layers.append(nn.BatchNorm2d(new_channels))
+
+            if first:
+                first = False
+                if not normalized:
+                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
+            else:
+                if batch_norm:
+                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
+                decoder_layers.insert(0, activation_function())
+            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, **conv_args))
+
+            channels = new_channels
+            dim = dim / 2
+
     else:
         raise NotImplementedError()
 
