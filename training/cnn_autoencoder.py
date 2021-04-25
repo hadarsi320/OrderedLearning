@@ -80,33 +80,38 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, model_dir, epochs, l
 
 
 def main():
-    for filter_size in [2, 4, 8, 16, 32]:
-        print(f'\t\tFilter size {filter_size}')
-        epochs = 200
-        learning_rate = 1e-3
-        tol = 1e-3
-        sequence_bound = 100
+    # general options
+    epochs = 10
+    learning_rate = 1e-3
+    normalize_data = True
+    batch_size = 16
+    loss_criterion = 'MSELoss'
+    plateau_limit = 5
 
-        model = NestedDropoutAutoencoder(ConvAutoencoder(filter_size=filter_size),
-                                         tol=tol, sequence_bound=sequence_bound)
-        dataloader = cifar10.get_dataloader(16)
+    # model options
+    batch_norm = True
+    cae_mode = 'D'
+    # filter_size = 2
 
-        current_time = utils.current_time()
-        model_name = f'cae-A-{type(model).__name__}_{current_time}'
-        model_dir = f'{utils.save_dir}/{model_name}'
-        os.mkdir(model_dir)
+    # nested dropout options
+    tol = 1e-5
+    seq_bound = 2 ** 5
+    p = 0.1
+    dropout_depth = 1
 
-        train_autoencoder(model, dataloader, epochs, learning_rate, model_dir, filter_size=filter_size, tol=tol,
-                          batch_norm=True, sequence_bound=sequence_bound, plateau_limit=None)
+    dataloader = cifar10.get_dataloader(batch_size, normalize=normalize_data)
+    # model_kwargs = dict(mode=cae_mode, loss_criterion=loss_criterion, learning_rate=learning_rate,
+    #                     batch_norm=batch_norm, normalize_data=normalize_data, plateau_limit=plateau_limit)
+    model_kwargs = dict(mode=cae_mode, loss_criterion=loss_criterion, learning_rate=learning_rate,
+                        batch_norm=batch_norm, normalize_data=normalize_data, plateau_limit=plateau_limit,
+                        dropout_depth=dropout_depth, p=p, sequence_bound=seq_bound, tol=tol)
 
-    # model_dict = torch.load('saves/cae-A-NestedDropoutAutoencoder_21-04-13--15-18-32/model.pt')
-    # model = NestedDropoutAutoencoder(ConvAutoencoder(filter_size=model_dict['filter_size']))
-    # model.load_state_dict(model_dict['model'])
-    # dataloader = cifar10.get_dataloader(16)
-    #
-    # current_time = utils.current_time()
-    # model_name = f'cae-A-{type(model).__name__}_{current_time}'
-    # model_dir = f'{utils.save_dir}/{model_name}'
-    # os.mkdir(model_dir)
-    #
-    # train_autoencoder(model, dataloader, 100, 1e-3, model_dir, optimizer_state=model_dict['optimizer'])
+    model = ConvAutoencoder(**model_kwargs)
+    model = NestedDropoutAutoencoder(model, **model_kwargs)
+
+    current_time = utils.current_time()
+    model_name = f'cae-{cae_mode}-{type(model).__name__}_{current_time}'
+    model_dir = f'{utils.save_dir}/{model_name}'
+    os.mkdir(model_dir)
+
+    train_autoencoder(model, dataloader, model_dir, epochs, **model_kwargs)
