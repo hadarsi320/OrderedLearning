@@ -4,21 +4,23 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 import utils
-from data.constants import CIFAR10_MEAN, CIFAR10_STD
+from data.constants import IMAGENETTE_Y_MEAN, IMAGENETTE_Y_STD
 
 
 def get_dataloader(batch_size=1, normalize=True, image_mode='RGB'):
     transform_list = []
-    if image_mode == 'YCbCr':
-        transform_list = [transforms.Lambda(lambda image: image.convert('YCbCr'))]
-    transform_list.append(transforms.ToTensor())
+    if image_mode in ['Y', 'YCbCr']:
+        transform_list.append(transforms.Lambda(lambda image: image.convert('YCbCr')))
+    transform_list.extend([transforms.Resize((224, 224)),
+                           transforms.ToTensor()])
+    if image_mode == 'Y':
+        transform_list.append(transforms.Lambda(lambda image: image[[0]]))
+
     if normalize:
-        if image_mode == 'RGB':
-            pass
-        elif image_mode == 'YCbCr':
-            pass
+        if image_mode == 'Y':
+            transform_list.append(transforms.Normalize(IMAGENETTE_Y_MEAN, IMAGENETTE_Y_STD))
         else:
-            NotImplementedError(f'Image mode {image_mode} not implemented')
+            NotImplementedError(f'Normalization for image mode {image_mode} not implemented')
 
     transform = transforms.Compose(transform_list)
     dataset = torchvision.datasets.ImageFolder(utils.imagenette_dir, transform=transform)
@@ -33,4 +35,4 @@ def load_data(dataloader=None, normalize=True):
 
 
 def unnormalize(im: torch.Tensor):
-    return utils.restore_image(im.cpu().view(3, 32, 32), CIFAR10_MEAN, CIFAR10_STD)
+    return utils.restore_image(im.cpu().view(3, 32, 32), IMAGENETTE_Y_MEAN, IMAGENETTE_Y_STD)
