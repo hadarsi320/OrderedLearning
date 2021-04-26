@@ -3,8 +3,8 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from .constants import CIFAR10_MEAN, CIFAR10_STD
 import utils
+from data import CIFAR10_MEAN, CIFAR10_STD
 
 
 def get_dataloader(batch_size=1, download=False, normalize=True):
