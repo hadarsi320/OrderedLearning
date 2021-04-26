@@ -26,3 +26,7 @@ def load_data(dataloader=None, normalize=True):
 def unnormalize(im: torch.Tensor):
     raise NotImplementedError('Normalization is yet to be implemented for celeba')
     # return utils.restore_image(im.cpu().view(3, 32, 32), CIFAR10_MEAN, CIFAR10_STD)
+
+
+if __name__ == '__main__':
+    raise NotImplementedError('The CelebA module doesn\'t work and shoudln\'t be imported')
