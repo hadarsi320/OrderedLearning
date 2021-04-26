@@ -9,9 +9,14 @@ def get_data_representation(autoencoder, dataloader, device):
     return torch.cat([autoencoder.encode(batch.to(device)) for batch, _ in dataloader])
 
 
-def restore_image(data, mean, std) -> torch.tensor:
-    restored_image = torch.tensor(std).view(3, 1, 1) * data + torch.tensor(mean).view(3, 1, 1)
+def restore_image(image, mean, std) -> torch.tensor:
+    restored_image = torch.tensor(std).view(3, 1, 1) * image + torch.tensor(mean).view(3, 1, 1)
     return restored_image.permute(1, 2, 0)
+
+
+def plot_image(image):
+    plt.imshow(image.permute(1, 2, 0))
+    plt.show()
 
 
 def binarize_data(data: torch.Tensor, bin_quantile=0.5):
