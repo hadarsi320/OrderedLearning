@@ -40,8 +40,6 @@ class NestedDropout(nn.Module):
         return x
 
     def check_convergence(self, x):
-        # difference_old = (linalg.norm((x - self.old_repr)[:, :self.converged_unit + 1]) /
-        #                   (x.shape[0] * (self.converged_unit + 1)))
         z = (x - self.old_repr)[:, :self.converged_unit + 1].reshape(-1)
         difference = linalg.norm(z) / len(z)
 
