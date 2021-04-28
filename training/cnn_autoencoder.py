@@ -4,7 +4,7 @@ import numpy as np
 from torch import nn, optim
 
 import utils
-from data import cifar10
+from data import imagenette
 from models.autoencoders import Autoencoder, ConvAutoencoder, NestedDropoutAutoencoder
 
 
@@ -73,40 +73,40 @@ def train_autoencoder(autoencoder: Autoencoder, dataloader, model_dir, epochs, l
         end = 'has plateaued'
     else:
         end = f'reached max number of epochs ({epochs})'
-    utils.save_model(autoencoder, optimizer, f'{model_dir}/model',
-                     losses=losses, best_loss=best_loss, end=end, learning_rate=learning_rate, **kwargs)
+    utils.update_save(f'{model_dir}/model', end=end)
 
     return autoencoder, losses
 
 
 def main():
     # general options
-    epochs = 10
+    epochs = 50
     learning_rate = 1e-3
     normalize_data = True
     batch_size = 16
     loss_criterion = 'MSELoss'
     plateau_limit = 5
+    dataset = 'imagenette'
+    image_mode = 'Y'
+    channels = 1 if image_mode == 'Y' else 3
 
     # model options
     batch_norm = True
-    cae_mode = 'D'
-    # filter_size = 2
+    cae_mode = 'E'
 
     # nested dropout options
-    tol = 1e-5
-    seq_bound = 2 ** 5
+    tol = 1e-4
+    seq_bound = 2 ** 7
     p = 0.1
     dropout_depth = 1
 
-    dataloader = cifar10.get_dataloader(batch_size, normalize=normalize_data)
-    # model_kwargs = dict(mode=cae_mode, loss_criterion=loss_criterion, learning_rate=learning_rate,
-    #                     batch_norm=batch_norm, normalize_data=normalize_data, plateau_limit=plateau_limit)
+    dataloader = imagenette.get_dataloader(batch_size, normalize=normalize_data, image_mode=image_mode)
     model_kwargs = dict(mode=cae_mode, loss_criterion=loss_criterion, learning_rate=learning_rate,
-                        batch_norm=batch_norm, normalize_data=normalize_data, plateau_limit=plateau_limit,
-                        dropout_depth=dropout_depth, p=p, sequence_bound=seq_bound, tol=tol)
-
+                        batch_norm=batch_norm, dataset=dataset, image_mode=image_mode, channels=channels,
+                        normalize_data=normalize_data, plateau_limit=plateau_limit)
     model = ConvAutoencoder(**model_kwargs)
+
+    model_kwargs.update(dict(dropout_depth=dropout_depth, p=p, sequence_bound=seq_bound, tol=tol))
     model = NestedDropoutAutoencoder(model, **model_kwargs)
 
     current_time = utils.current_time()
