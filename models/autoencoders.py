@@ -1,3 +1,4 @@
+import itertools
 from abc import ABC
 
 import torch
@@ -33,14 +34,9 @@ class Autoencoder(ABC, nn.Module):
 
     def get_weights(self, depth):
         i = 1
-        for child in self._encoder.children():
+        for child in itertools.chain(self._encoder.children(), self._decoder.children()):
             if isinstance(child, (nn.Conv2d, nn.Linear)) and i == depth:
-                return child.weight.data.numpy()
-            i += 1
-
-        for child in self._decoder.children():
-            if isinstance(child, (nn.Conv2d, nn.Linear)) and i == depth:
-                return child.weight.data.numpy()
+                return child.weight, child.bias
             i += 1
 
         raise ValueError('Depth is too deep')
@@ -115,13 +111,13 @@ def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
     activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
     normalized = kwargs.get('normalize_data', True)
 
-    channels = 3
+    channels = kwargs.get('channels', 3)
     dim = starting_dim
     encoder_layers = []
     decoder_layers = []
 
     if mode == 'A':
-        filter_size = kwargs.get('filter_size', 2)
+        filter_size = 2
         first = True
         while dim >= filter_size:
             new_channels = utils.get_power_successor(channels)
@@ -222,6 +218,58 @@ def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
             channels = new_channels
             dim = dim / 2
 
+    elif mode == 'E':
+        channels_list = [64]
+        conv_args = {'kernel_size': 8, 'stride': 8}
+
+        encoder_layers = []
+        decoder_layers = []
+        first = True
+        for new_channels in channels_list:
+            encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
+            encoder_layers.append(activation_function())
+            if batch_norm:
+                encoder_layers.append(nn.BatchNorm2d(new_channels))
+
+            if first:
+                first = False
+                if not normalized:
+                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
+            else:
+                if batch_norm:
+                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
+                decoder_layers.insert(0, activation_function())
+            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, **conv_args))
+
+            channels = new_channels
+            dim = dim / 2
+
+    elif mode == 'F':
+        channels_list = [64, 64, 128]
+        conv_args_list = [{'kernel_size': 8, 'stride': 8},
+                     {'kernel_size': 2, 'stride': 2},
+                     {'kernel_size': 2, 'stride': 2}]
+
+        encoder_layers = []
+        decoder_layers = []
+        first = True
+        for new_channels, conv_args in zip(channels_list, conv_args_list):
+            encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
+            encoder_layers.append(activation_function())
+            if batch_norm:
+                encoder_layers.append(nn.BatchNorm2d(new_channels))
+
+            if first:
+                first = False
+                if not normalized:
+                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
+            else:
+                if batch_norm:
+                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
+                decoder_layers.insert(0, activation_function())
+            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, **conv_args))
+
+            channels = new_channels
     else:
         raise NotImplementedError()
 
