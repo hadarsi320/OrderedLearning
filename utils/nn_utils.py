@@ -1,3 +1,4 @@
+import os
 from math import log2, ceil, floor
 
 import numpy as np
@@ -86,6 +87,17 @@ def save_model(model, optimizer, file_name, **kwargs):
     with open(f'{file_name}.txt', 'w') as f:
         for key in kwargs:
             f.write(f'{key}: {kwargs[key]}\n')
+
+
+def update_save(file_name, **kwargs):
+    save_dict: dict = torch.load(f'{file_name}.pt')
+    save_dict.update(kwargs)
+    torch.save(save_dict, f'{file_name}.pt')
+
+    with open(f'{file_name}.txt', 'w') as f:
+        for key in save_dict:
+            if key not in ['model', 'optimizer']:
+                f.write(f'{key}: {save_dict[key]}\n')
 
 
 def fit_dim(tensor: torch.Tensor, target: torch.Tensor):
