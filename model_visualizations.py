@@ -198,48 +198,69 @@ def cae_reconstruction_error_plot(nd_autoencoder, dataloader):
     plt.show()
 
 
-def plot_filters(cae, title=None):
-    filter_matrix = cae.get_weights(1)
+@torch.no_grad()
+def plot_filters(cae, title=None, output_shape=None):
+    filter_matrix, _ = cae.get_weights(1)
     shape = filter_matrix.shape
-    if shape[0] % 2 == 0:
-        filter_matrix = np.reshape(filter_matrix, (shape[0] // 2, shape[1] * 2, shape[2], shape[3]))
-    fig, axes_mat = plt.subplots(nrows=filter_matrix.shape[0], ncols=filter_matrix.shape[1])
+    channels = shape[1]
+
+    if output_shape is None:
+        output_shape = shape[:2]
+    else:
+        assert output_shape[1] % channels == 0
+        filter_matrix = np.reshape(filter_matrix, (output_shape[0], output_shape[1], shape[2], shape[3]))
+
+    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[0] * 1, output_shape[1] * 1))
     for i, (filters, axes) in enumerate(zip(filter_matrix, axes_mat)):
         for j, (filter, axis) in enumerate(zip(filters, axes)):
-            # axis.axis('off')
             axis.set_xticks([])
             axis.set_yticks([])
-            if (j - 1) % 3 == 0:
-                axis.set_xlabel(f'{2 * i + j // 3 + 1}')
-            axis.imshow(filter, cmap='plasma')
+            axis.imshow(filter, cmap='Greys')
     if title is not None:
-        fig.suptitle(title, y=0.92)
+        fig.suptitle(title)
+    plt.tight_layout()
     plt.show()
 
 
 def main():
-    vl_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/cae-D-ConvAutoencoder_21-04-22--09-58-35/'
-    # ne_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/*cae-C-NestedDropoutAutoencoder_21-04-20--16-55-48/'
-    ne_model_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/cae-D-NestedDropoutAutoencoder_21-04-22--10-01-43/'
-
-    save_dict = torch.load(f'{vl_model_dir}/model.pt')
-    normalized = save_dict['normalize_data']
-    vl_autoencoder = ConvAutoencoder(**save_dict)
-    vl_autoencoder.load_state_dict(save_dict['model'])
-    vl_autoencoder.eval()
-
-    save_dict = torch.load(f'{ne_model_dir}/model.pt')
-    assert normalized == save_dict['normalize_data']
-    nd_autoencoder = NestedDropoutAutoencoder(ConvAutoencoder(**save_dict), **save_dict)
-    nd_autoencoder.load_state_dict(save_dict['model'])
-    nd_autoencoder.eval()
-    dataloader = cifar10.get_dataloader(128, normalize=normalized)
+    # vl_model_dir = r'C:\Users\Hadar\PycharmProjects\OrderedLearning\saves\cae-E-ConvAutoencoder_21-04-27--17-47-53'
+    # ne_model_dir = r'C:\Users\Hadar\PycharmProjects\OrderedLearning\saves\cae-E-NestedDropoutAutoencoder_21-04-27--20' \
+    #                r'-07-31'
+    # device = utils.get_device()
+    #
+    # save_dict = torch.load(f'{vl_model_dir}/model.pt', map_location=device)
+    # normalized = save_dict['normalize_data']
+    # vl_autoencoder = ConvAutoencoder(**save_dict)
+    # vl_autoencoder.load_state_dict(save_dict['model'])
+    # vl_autoencoder.eval()
+    #
+    # save_dict = torch.load(f'{ne_model_dir}/model.pt', map_location=device)
+    # assert normalized == save_dict['normalize_data']
+    # nd_autoencoder = NestedDropoutAutoencoder(ConvAutoencoder(**save_dict),
+    #                                           **save_dict)
+    # nd_autoencoder.load_state_dict(save_dict['model'])
+    # nd_autoencoder.eval()
 
     # compare_num_channels(model_dir)
     # cae_reconstruction_error_plot(nd_autoencoder, dataloader)
     # utils.plot_repr_var(nd_autoencoder, dataloader, show=True, ylabel='Channels')
-    plot_filters(vl_autoencoder, title='Vanilla Convolutional Autoencoder')
-    plot_filters(nd_autoencoder, title='Nested Dropout Convolutional Autoencoder')
+    # plot_filters(vl_autoencoder, title='Vanilla Convolutional Autoencoder', output_shape=(8, 8))
+    # plot_filters(nd_autoencoder, title='Nested Dropout Convolutional Autoencoder', output_shape=(8, 8))
+
+    device = utils.get_device()
+    models = ['saves/cae-E-ConvAutoencoder_21-04-27--17-47-53',
+              'saves/cae-E-NestedDropoutAutoencoder_21-04-27--19-40-44',
+              'saves/cae-E-NestedDropoutAutoencoder_21-04-27--20-07-31']
+    for model in models:
+        save_dict = torch.load(f'{model}/model.pt', map_location=device)
+        nested_dropout = 'p' in save_dict
+        model = ConvAutoencoder(**save_dict)
+        if nested_dropout:
+            model = NestedDropoutAutoencoder(model, **save_dict)
+        title = 'Convolutional Autoencoder'
+        if nested_dropout:
+            title = f'Nested Dropout {title}'
+        plot_filters(model, title=title, output_shape=(8, 8))
 
 
 if __name__ == '__main__':

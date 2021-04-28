@@ -1,3 +1,11 @@
-save_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/'
-datasets_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/data/'
-imagenette_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/datasets/imagenette2-320/'
+import socket
+
+if socket.gethostname() == 'Hadars_Laptop':
+    save_dir = r'C:\Users\Hadar\PycharmProjects\OrderedLearning\saves'
+    datasets_dir = r'C:\Users\Hadar\PycharmProjects\OrderedLearning\datasets'
+    imagenette_dir = r'C:\Users\Hadar\PycharmProjects\OrderedLearning\datasets\imagenette2-320'
+
+else:
+    save_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/saves/'
+    datasets_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/datasets/'
+    imagenette_dir = '/mnt/ml-srv1/home/hadarsi/ordered_learning/datasets/imagenette2-320/'
