@@ -3,15 +3,25 @@ from datetime import datetime
 import torch
 import matplotlib.pyplot as plt
 
-
-@torch.no_grad()
-def get_data_representation(autoencoder, dataloader, device):
-    return torch.cat([autoencoder.encode(batch.to(device)) for batch, _ in dataloader])
+import utils
 
 
-def restore_image(image, mean, std) -> torch.tensor:
-    restored_image = torch.tensor(std).view(3, 1, 1) * image + torch.tensor(mean).view(3, 1, 1)
-    return restored_image.permute(1, 2, 0)
+def restore_image(image, mean, std, im_format='RGB') -> torch.tensor:
+    std = torch.tensor(std).unsqueeze(-1).unsqueeze(-1)
+    mean = torch.tensor(mean).unsqueeze(-1).unsqueeze(-1)
+    restored_image = std * image + mean
+    return to_rgb(restored_image, im_format).permute(1, 2, 0)
+
+
+def to_rgb(image, im_format):
+    if im_format == 'RGB':
+        return image
+    elif im_format == 'Y':
+        return utils.y_to_rgb(image)
+    elif im_format == 'YCbCr':
+        return utils.ycbcr_to_rgb(image)
+    else:
+        raise NotImplementedError()
 
 
 def plot_image(image):
@@ -29,31 +39,6 @@ def binarize_data(data: torch.Tensor, bin_quantile=0.5):
     return binarized
 
 
-@torch.no_grad()
-def plot_repr_var(autoencoder, dataloader, scale='log', show=False, **kwargs):
-    device = kwargs.get('device', get_device())
-    autoencoder = autoencoder.to(device)
-
-    plt.clf()
-    reprs = get_data_representation(autoencoder, dataloader, device)
-    if reprs.dim() == 4:
-        plt.plot(torch.mean(torch.var(reprs, dim=[0]), dim=[1, 2]).cpu())
-    else:
-        plt.plot(torch.var(reprs, dim=0).cpu())
-    plt.yscale(scale)
-    plt.xlabel(kwargs.get('xlabel', 'Units'))
-    plt.ylabel(kwargs.get('ylabel', 'Variance'))
-
-    if 'title' in kwargs:
-        plt.title(kwargs.pop('title'))
-
-    if 'savefig' in kwargs:
-        plt.savefig(kwargs.pop('savefig'))
-
-    if show:
-        plt.show()
-
-
 def current_time():
     return datetime.now().strftime('%y-%m-%d--%H-%M-%S')
 
@@ -64,3 +49,13 @@ def get_device():
             return torch.device('cuda:7')
         return torch.device('cuda')
     return torch.device('cpu')
+
+
+def adaptable_round(number, precision):
+    if number == 0:
+        return number
+    while True:
+        round_number = round(number, ndigits=precision)
+        if round_number != 0:
+            return round_number
+        precision += 1
