@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 
 from torch import linalg
+from tqdm import tqdm
 
 
 def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout_p=0.2):
@@ -65,10 +66,13 @@ def estimate_code_variance(autoencoder, batch, batch_repr=None):
 
 
 @torch.no_grad()
-def get_model_loss(model, dataloader, loss_function, device):
+def get_model_loss(model, dataloader, loss_function, device, sample=None):
     model.eval()
     losses = []
-    for x, y in dataloader:
+    total = min(len(dataloader), sample) if sample is not None else len(dataloader)
+    for i, (x, y) in tqdm(enumerate(dataloader), total=total):
+        if sample is not None and i == sample:
+            break
         x, y = x.to(device), y.to(device)
         res = model(x)
         losses.append(loss_function(x, y, res).item())
@@ -104,3 +108,12 @@ def fit_dim(tensor: torch.Tensor, target: torch.Tensor):
     while tensor.dim() < target.dim():
         tensor = tensor.unsqueeze(-1)
     return tensor
+
+
+def get_num_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+@torch.no_grad()
+def get_data_representation(autoencoder, dataloader, device):
+    return torch.cat([autoencoder.encode(batch.to(device)) for batch, _ in dataloader])
