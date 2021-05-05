@@ -2,14 +2,6 @@ import torch
 
 
 def rgb_to_ycbcr(image: torch.Tensor) -> torch.Tensor:
-    r"""Convert an RGB image to YCbCr.
-
-    Args:
-        image (torch.Tensor): RGB Image to be converted to YCbCr with shape :math:`(*, 3, H, W)`.
-
-    Returns:
-        torch.Tensor: YCbCr version of the image with shape :math:`(*, 3, H, W)`.
-    """
     if not isinstance(image, torch.Tensor):
         raise TypeError("Input type is not a torch.Tensor. Got {}".format(
             type(image)))
@@ -30,20 +22,6 @@ def rgb_to_ycbcr(image: torch.Tensor) -> torch.Tensor:
 
 
 def ycbcr_to_rgb(image: torch.Tensor) -> torch.Tensor:
-    r"""Convert an YCbCr image to RGB.
-
-    The image data is assumed to be in the range of (0, 1).
-
-    Args:
-        image (torch.Tensor): YCbCr Image to be converted to RGB with shape :math:`(*, 3, H, W)`.
-
-    Returns:
-        torch.Tensor: RGB version of the image with shape :math:`(*, 3, H, W)`.
-
-    Examples:
-        >>> input = torch.rand(2, 3, 4, 5)
-        >>> output = ycbcr_to_rgb(input)  # 2x3x4x5
-    """
     if not isinstance(image, torch.Tensor):
         raise TypeError("Input type is not a torch.Tensor. Got {}".format(
             type(image)))
@@ -64,3 +42,16 @@ def ycbcr_to_rgb(image: torch.Tensor) -> torch.Tensor:
     g: torch.Tensor = y - 0.714 * cr_shifted - 0.344 * cb_shifted
     b: torch.Tensor = y + 1.773 * cb_shifted
     return torch.stack([r, g, b], -3)
+
+
+def y_to_rgb(image: torch.Tensor):
+    assert image.shape[-3] == 1
+
+    shape = list(image.shape)
+    shape[-3] = 3
+    new_image = torch.zeros(shape)
+
+    new_image[..., 0, :, :] = image
+    new_image[..., 1, :, :] = 0.5
+    new_image[..., 2, :, :] = 0.5
+    return ycbcr_to_rgb(new_image)
