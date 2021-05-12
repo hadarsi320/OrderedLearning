@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 
 import torch
@@ -59,3 +60,7 @@ def adaptable_round(number, precision):
         if round_number != 0:
             return round_number
         precision += 1
+
+
+def format_time(seconds):
+    return time.strftime('%H:%M:%S', time.gmtime(seconds))
