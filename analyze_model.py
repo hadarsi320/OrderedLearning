@@ -3,6 +3,7 @@ import os
 import torch
 import torch.nn.functional as F
 
+import model_visualizations
 import utils
 from data import cifar10
 
@@ -28,7 +29,7 @@ def main():
             print(f'\tmodel loss: {loss:.2f}')
             print()
 
-            utils.plot_repr_var(autoencoder, dataloader, device, title=file, show=True)
+            model_visualizations.plot_repr_var(autoencoder, dataloader, device, title=file, show=True)
             losses_dict[file] = loss
 
     best_models = sorted(losses_dict, key=lambda x: losses_dict[x])[:5]
