@@ -7,6 +7,7 @@ from torch import optim, nn, linalg
 from torch.distributions import Geometric
 from tqdm import tqdm
 
+import model_visualizations
 import utils
 from data import cifar10
 from models.autoencoders import FCAutoencoder
@@ -87,9 +88,9 @@ def fit_vanilla_autoencoder(autoencoder: FCAutoencoder, dataloader, learning_rat
             if save_plots:
                 kwargs['savefig'] = f'plots/{model_name}/epoch_{epoch + 1}.png'
             if save_plots or show_plots:
-                utils.plot_repr_var(autoencoder, dataloader, device, show=show_plots,
-                                    title=f'Representation variance- epoch {epoch + 1}',
-                                    **kwargs)
+                model_visualizations.plot_repr_var(autoencoder, dataloader, device, show=show_plots,
+                                                   title=f'Representation variance- epoch {epoch + 1}',
+                                                   **kwargs)
             if save_models:
                 torch.save(autoencoder, f'checkpoints/{model_name}/epoch_{epoch + 1}.pt')
     print('Finished training')
@@ -98,8 +99,8 @@ def fit_vanilla_autoencoder(autoencoder: FCAutoencoder, dataloader, learning_rat
     if save_plots:
         kwargs['savefig'] = f'plots/{model_name}/final.png'
     if save_plots or show_plots:
-        utils.plot_repr_var(autoencoder, dataloader, device,
-                            title='Final representation variance', show=show_plots, **kwargs)
+        model_visualizations.plot_repr_var(autoencoder, dataloader, device,
+                                           title='Final representation variance', show=show_plots, **kwargs)
 
         plt.clf()
         plt.plot(losses)
@@ -186,11 +187,11 @@ def fit_nested_dropout_autoencoder(autoencoder: FCAutoencoder, dataloader, learn
             if save_plots:
                 kwargs['savefig'] = f'plots/{model_name}/epoch_{epoch + 1}.png'
             if save_plots or show_plots:
-                utils.plot_repr_var(autoencoder, dataloader, device, show=show_plots,
-                                    title=f'Representation variance- epoch {epoch + 1}',
-                                    **kwargs)
+                model_visualizations.plot_repr_var(autoencoder, dataloader, device, show=show_plots,
+                                                   title=f'Representation variance- epoch {epoch + 1}',
+                                                   **kwargs)
             if save_models:
-                # TODO implement saving a model when its accuracy is higher than its priors
+                # TODO save a model when its accuracy is higher than its priors
                 torch.save(autoencoder, f'checkpoints/{model_name}/epoch_{epoch + 1}.pt')
 
         if converged is True:
@@ -202,8 +203,8 @@ def fit_nested_dropout_autoencoder(autoencoder: FCAutoencoder, dataloader, learn
     if save_plots:
         kwargs['savefig'] = f'plots/{model_name}/final.png'
     if save_plots or show_plots:
-        utils.plot_repr_var(autoencoder, dataloader, device,
-                            title='Final representation variance', show=show_plots, **kwargs)
+        model_visualizations.plot_repr_var(autoencoder, dataloader, device,
+                                           title='Final representation variance', show=show_plots, **kwargs)
 
         plt.clf()
         plt.plot(losses)
