@@ -8,7 +8,7 @@ __all__ = ['NestedDropout']
 
 
 class NestedDropout(nn.Module):
-    def __init__(self, tol=1e-3, sequence_bound=10, p=0.1, **kwargs):
+    def __init__(self, tol=1e-3, sequence_bound=2 ** 4, p=0.1, **kwargs):
         super(NestedDropout, self).__init__()
         self.tol = tol
         self.sequence = 0
