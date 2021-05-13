@@ -33,11 +33,12 @@ class Autoencoder(ABC, nn.Module):
         return x
 
     def get_weights(self, depth):
-        i = 1
+        i = 0
         for child in itertools.chain(self._encoder.children(), self._decoder.children()):
-            if isinstance(child, (nn.Conv2d, nn.Linear)) and i == depth:
-                return child.weight, child.bias
-            i += 1
+            if isinstance(child, (nn.Conv2d, nn.Linear)):
+                i += 1
+                if i == depth:
+                    return child.weight, child.bias
 
         raise ValueError('Depth is too deep')
 
@@ -76,18 +77,26 @@ class NestedDropoutAutoencoder(Autoencoder):
         nested_dropout_layer = NestedDropout(**kwargs)
         encoder_layers = list(self._encoder.children())
         decoder_layers = list(self._decoder.children())
+
+        num_convs = sum(isinstance(layer, nn.Conv2d) for layer in encoder_layers)
+        if self._dropout_depth > num_convs:
+            raise ValueError(f'Dropout depth is too large, there are only {num_convs} convolutions, while dropout '
+                             f'depth is {self._dropout_depth}')
+
         if self._dropout_depth is not None:
             i = 0
             for j, layer in enumerate(encoder_layers):
                 if isinstance(layer, nn.Conv2d):
                     i += 1
-                    if i == self._dropout_depth:
-                        self._encoder = nn.Sequential(*encoder_layers[:j + 1])
-                        self._decoder = nn.Sequential(*(encoder_layers[j + 1:] + decoder_layers))
-                        i = None
-                        break
-            if i is not None:
-                raise ValueError('Dropout depth is too deep')
+                # if i == self._dropout_depth:
+                #     self._encoder = nn.Sequential(*encoder_layers[:j + 1])
+                #     self._decoder = nn.Sequential(*(encoder_layers[j + 1:] + decoder_layers))
+                #     i = None
+                #     break
+                if i == self._dropout_depth + 1 or j == len(encoder_layers) - 1:
+                    break
+            self._encoder = nn.Sequential(*encoder_layers[:j])
+            self._decoder = nn.Sequential(*(encoder_layers[j:] + decoder_layers))
 
         return nested_dropout_layer
 
@@ -107,9 +116,10 @@ class NestedDropoutAutoencoder(Autoencoder):
         return self._dropout_layer.dropout_dim
 
 
-def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
+def create_cae(mode, starting_dim, **kwargs):
     activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
     normalized = kwargs.get('normalize_data', True)
+    batch_norm = kwargs.get('batch_norm', True)
 
     channels = kwargs.get('channels', 3)
     dim = starting_dim
@@ -245,10 +255,10 @@ def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
             dim = dim / 2
 
     elif mode == 'F':
-        channels_list = [64, 64, 128]
+        channels_list = [64, 128, 128]
         conv_args_list = [{'kernel_size': 8, 'stride': 8},
-                     {'kernel_size': 2, 'stride': 2},
-                     {'kernel_size': 2, 'stride': 2}]
+                          {'kernel_size': 2, 'stride': 2},
+                          {'kernel_size': 2, 'stride': 2}]
 
         encoder_layers = []
         decoder_layers = []
@@ -271,6 +281,6 @@ def create_cae(mode, starting_dim, batch_norm=True, **kwargs):
 
             channels = new_channels
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(f'Mode {mode} not implemented')
 
     return nn.Sequential(*encoder_layers), nn.Sequential(*decoder_layers)

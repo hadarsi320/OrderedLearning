@@ -3,6 +3,8 @@ from torch import nn
 
 from models.layers import *
 
+__all__ = ['Classifier']
+
 
 class Classifier(nn.Module):
     def __init__(self, mode: str, num_classes: int, apply_nested_dropout: bool, **kwargs):
@@ -10,22 +12,22 @@ class Classifier(nn.Module):
         self._mode = mode
         self._num_classes = num_classes
         self.apply_nested_dropout = apply_nested_dropout
-        self._classifier = self.__create_classifier(mode, num_classes, **kwargs)
+        self._classifier = self.__create_classifier(**kwargs)
 
-    def __create_classifier(self, mode, num_classes, **kwargs):
+    def __create_classifier(self, **kwargs):
         activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
         batch_norm = kwargs.get('batch_norm', True)
         channels = kwargs.get('channels', 3)
         apply_nested_dropout = self.apply_nested_dropout
 
         layers = []
-        if mode == 'A':
+        if self._mode == 'A':
             channels_list = [32, 64, 64, 128]
             conv_args_list = [{'kernel_size': 8, 'stride': 8},
                               {'kernel_size': 2, 'stride': 2},
                               {'kernel_size': 2, 'stride': 2},
                               {'kernel_size': 7, 'stride': 7}]
-            dims = [100, num_classes]
+            dims = [100, self._num_classes]
 
             last_channels = channels
             for channels, conv_args in zip(channels_list, conv_args_list):
@@ -34,8 +36,8 @@ class Classifier(nn.Module):
                 if batch_norm:
                     layers.append(nn.BatchNorm2d(channels))
                 if apply_nested_dropout:
-                    self.nested_dropout_layer = NestedDropout(**kwargs)
-                    layers.append(self.nested_dropout_layer)
+                    self._dropout_layer = NestedDropout(**kwargs)
+                    layers.append(self._dropout_layer)
                     apply_nested_dropout = False
                 last_channels = channels
 
@@ -51,7 +53,7 @@ class Classifier(nn.Module):
                 last_dim = dim
 
         else:
-            raise NotImplementedError(f'Mode {mode} not implemented')
+            raise NotImplementedError(f'Mode {self._mode} not implemented')
 
         return nn.Sequential(*layers)
 
@@ -78,3 +80,13 @@ class Classifier(nn.Module):
         if not self.apply_nested_dropout:
             return None
         return self._dropout_layer.dropout_dim
+
+    def get_weights(self, depth):
+        i = 0
+        for child in self._classifier.children():
+            if isinstance(child, (nn.Conv2d, nn.Linear)):
+                i += 1
+                if i == depth:
+                    return child.weight, child.bias
+
+        raise ValueError('Depth is too deep')

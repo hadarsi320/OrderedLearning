@@ -59,7 +59,8 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
         epoch_time = time.time() - epoch_start
         train_time += epoch_time
 
-        print(f'\tTotal epoch loss {epoch_loss} \tEpoch time {utils.format_time(epoch_time)}\n')
+        print(f'\tTotal epoch loss {epoch_loss}')
+        print(f'\tEpoch time {utils.format_time(epoch_time)}\n')
         if epoch_loss < best_loss:
             best_loss = epoch_loss
             utils.save_model(model, optimizer, f'{model_dir}/model', losses=losses, best_loss=best_loss,

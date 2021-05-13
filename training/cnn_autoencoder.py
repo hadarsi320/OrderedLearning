@@ -23,7 +23,7 @@ def main():
     # model options
     activation = 'ReLU'
     batch_norm = False
-    cae_mode = 'A'
+    cae_mode = 'E'
 
     # nested dropout options
     dropout_depth = 1

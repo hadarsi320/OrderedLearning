@@ -1,16 +1,17 @@
 import math
+import os
 import pickle
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from torch import nn
 from tqdm import tqdm
 
 import utils
-from data import cifar10
-from models.autoencoders import *
-from torch.linalg import norm
+from data import imagenette
+from models import *
+from utils import get_device, get_data_representation
 
 
 @torch.no_grad()
@@ -52,21 +53,41 @@ def compare_code_lengths():
 
 
 @torch.no_grad()
-def compare_num_channels(model_dir):
+def plot_repr_var(autoencoder, dataloader, scale='log', show=False, **kwargs):
+    device = kwargs.get('device', get_device())
+    autoencoder = autoencoder.to(device)
+
+    plt.clf()
+    reprs = get_data_representation(autoencoder, dataloader, device)
+    if reprs.dim() == 4:
+        plt.plot(torch.mean(torch.var(reprs, dim=[0]), dim=[1, 2]).cpu())
+    else:
+        plt.plot(torch.var(reprs, dim=0).cpu())
+    plt.yscale(scale)
+    plt.xlabel(kwargs.get('xlabel', 'Units'))
+    plt.ylabel(kwargs.get('ylabel', 'Variance'))
+
+    if 'title' in kwargs:
+        plt.title(kwargs.pop('title'))
+
+    if 'savefig' in kwargs:
+        plt.savefig(kwargs.pop('savefig'))
+
+    if show:
+        plt.show()
+
+
+@torch.no_grad()
+def plot_images_by_channels(model, data_module, normalized, im_format='RGB'):
     torch.random.manual_seed(42)
-    num_images = 6
-    num_channels = [1, 2, 4, 8, 32, 'Original']
+    num_channels = [1, 2, 4, 8, 16, 32, 64, 'Original']
+    num_images = len(num_channels)
 
-    save_dict = torch.load(f'{model_dir}/model.pt')
-    normalized = save_dict['normalize_data']
-
-    model = NestedDropoutAutoencoder(ConvAutoencoder(**save_dict), **save_dict)
-    model.load_state_dict(save_dict['model'])
-    model.eval()
-    images, _ = next(iter(cifar10.get_dataloader(num_images, normalize=normalized)))
+    images, _ = next(iter(data_module.get_dataloader(num_images, normalize=normalized)))
 
     plt.tight_layout()
-    fig, axes_mat = plt.subplots(ncols=num_images, nrows=len(num_channels), squeeze=False, figsize=(12, 12))
+    fig, axes_mat = plt.subplots(ncols=num_images, nrows=len(num_channels), squeeze=False,
+                                 figsize=(num_images * 2, num_images * 2))
     for i, (original_image, axes) in enumerate(zip(images, axes_mat.transpose())):
         encoding = model.encode(original_image).squeeze()
         for n, axis in zip(num_channels, axes):
@@ -76,7 +97,9 @@ def compare_num_channels(model_dir):
                 encoding_ = torch.zeros_like(encoding)
                 encoding_[:n] = encoding[:n]
                 image = model.decode(encoding_).squeeze()
-            axis.imshow(cifar10.unnormalize(image))
+
+            image = data_module.unnormalize(image, im_format)
+            axis.imshow(image)
             axis.set_xticks([])
             axis.set_yticks([])
             if i == 0:
@@ -157,12 +180,12 @@ def fcae_reconstruction_error_plot():
 
 
 @torch.no_grad()
-def get_reconstruction_error(autoencoder, dataloader, dim, device):
+def get_reconstruction_error(autoencoder, dataloader, dim, device, subset=200):
     loss_func = nn.MSELoss()
 
     losses = [[] for _ in range(dim)]
-    for i, (sample, _) in tqdm(enumerate(dataloader)):
-        if i == 100:
+    for i, (sample, _) in tqdm(enumerate(dataloader), total=subset):
+        if i == subset:
             break
 
         sample = sample.to(device)
@@ -177,9 +200,9 @@ def get_reconstruction_error(autoencoder, dataloader, dim, device):
 
 
 @torch.no_grad()
-def cae_reconstruction_error_plot(nd_autoencoder, dataloader):
+def plot_cae_reconstruction_error(nd_autoencoder, dataloader):
     # Reconstructing
-    repr_dim = 32
+    repr_dim = 64
     device = utils.get_device()
     nd_autoencoder = nd_autoencoder.to(device)
     nested_dropout_losses = get_reconstruction_error(nd_autoencoder, dataloader, repr_dim, device)
@@ -187,20 +210,21 @@ def cae_reconstruction_error_plot(nd_autoencoder, dataloader):
     # Plotting
     indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
 
-    plt.plot(range(1, repr_dim + 1), nested_dropout_losses)
-    plt.xlabel('Representation Bits')
-    plt.ylabel('Reconstruction Error')
-    plt.xticks(indices)
-    plt.title('Reconstruction Error by Channels')
-    # plt.savefig('plots/reconstruction_error')
-    plt.yscale('log')
-    plt.tight_layout()
-    plt.show()
+    for i in range(2):
+        plt.plot(range(1, repr_dim + 1), nested_dropout_losses)
+        plt.xlabel('Representation Channels')
+        plt.ylabel('Reconstruction Error')
+        plt.xticks(indices)
+        plt.title('Error by Channels')
+        if i == 0:
+            plt.yscale('log')
+        plt.tight_layout()
+        plt.show()
 
 
 @torch.no_grad()
-def plot_filters(cae, title=None, output_shape=None):
-    filter_matrix, _ = cae.get_weights(1)
+def plot_filters(model, title=None, output_shape=None):
+    filter_matrix, _ = model.get_weights(1)
     shape = filter_matrix.shape
     channels = shape[1]
 
@@ -208,9 +232,9 @@ def plot_filters(cae, title=None, output_shape=None):
         output_shape = shape[:2]
     else:
         assert output_shape[1] % channels == 0
-        filter_matrix = np.reshape(filter_matrix, (output_shape[0], output_shape[1], shape[2], shape[3]))
+        filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
 
-    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[0] * 1, output_shape[1] * 1))
+    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[0] * 2, output_shape[1] * 2))
     for i, (filters, axes) in enumerate(zip(filter_matrix, axes_mat)):
         for j, (filter, axis) in enumerate(zip(filters, axes)):
             axis.set_xticks([])
@@ -222,45 +246,54 @@ def plot_filters(cae, title=None, output_shape=None):
     plt.show()
 
 
-def main():
-    # vl_model_dir = r'C:\Users\Hadar\PycharmProjects\OrderedLearning\saves\cae-E-ConvAutoencoder_21-04-27--17-47-53'
-    # ne_model_dir = r'C:\Users\Hadar\PycharmProjects\OrderedLearning\saves\cae-E-NestedDropoutAutoencoder_21-04-27--20' \
-    #                r'-07-31'
-    # device = utils.get_device()
-    #
-    # save_dict = torch.load(f'{vl_model_dir}/model.pt', map_location=device)
-    # normalized = save_dict['normalize_data']
-    # vl_autoencoder = ConvAutoencoder(**save_dict)
-    # vl_autoencoder.load_state_dict(save_dict['model'])
-    # vl_autoencoder.eval()
-    #
-    # save_dict = torch.load(f'{ne_model_dir}/model.pt', map_location=device)
-    # assert normalized == save_dict['normalize_data']
-    # nd_autoencoder = NestedDropoutAutoencoder(ConvAutoencoder(**save_dict),
-    #                                           **save_dict)
-    # nd_autoencoder.load_state_dict(save_dict['model'])
-    # nd_autoencoder.eval()
+def cae_plots(model_save: str, device, name=None):
+    if name is not None:
+        print(name)
 
-    # compare_num_channels(model_dir)
-    # cae_reconstruction_error_plot(nd_autoencoder, dataloader)
-    # utils.plot_repr_var(nd_autoencoder, dataloader, show=True, ylabel='Channels')
-    # plot_filters(vl_autoencoder, title='Vanilla Convolutional Autoencoder', output_shape=(8, 8))
-    # plot_filters(nd_autoencoder, title='Nested Dropout Convolutional Autoencoder', output_shape=(8, 8))
+    save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
+    nested_dropout = 'p' in save_dict
 
-    device = utils.get_device()
-    models = ['saves/cae-E-ConvAutoencoder_21-04-27--17-47-53',
-              'saves/cae-E-NestedDropoutAutoencoder_21-04-27--19-40-44',
-              'saves/cae-E-NestedDropoutAutoencoder_21-04-27--20-07-31']
-    for model in models:
-        save_dict = torch.load(f'{model}/model.pt', map_location=device)
-        nested_dropout = 'p' in save_dict
+    if os.path.basename(model_save).startswith('cae'):
         model = ConvAutoencoder(**save_dict)
         if nested_dropout:
             model = NestedDropoutAutoencoder(model, **save_dict)
-        title = 'Convolutional Autoencoder'
-        if nested_dropout:
-            title = f'Nested Dropout {title}'
-        plot_filters(model, title=title, output_shape=(8, 8))
+
+    elif os.path.basename(model_save).startswith('classifier'):
+        model = Classifier(**save_dict)
+
+    model.eval()
+    try:
+        model.load_state_dict(save_dict['model'])
+    except:
+        print('Save dict mismatch\n')
+        return None
+
+    print(utils.get_num_parameters(model), '\n')
+    title = 'Convolutional Autoencoder'
+    if nested_dropout:
+        title = f'Nested Dropout {title}'
+    if name is not None:
+        title += '\n' + name
+    plot_filters(model, title=title, output_shape=(8, 4))
+
+    # if nested_dropout:
+    #     plot_images_by_channels(model, imagenette, True, 'Y')
+    #     dataloader = imagenette.get_dataloader(normalize=True, image_mode='Y')
+    #     plot_cae_reconstruction_error(model, dataloader)
+
+
+def main():
+    device = utils.get_device()
+    model_saves = ['saves/cae-F-ConvAutoencoder_21-05-06--09-26-54',
+                   'saves/cae-F-NestedDropoutAutoencoder_21-05-06--00-27-18']
+    # model_saves = ['saves/cae-F-ConvAutoencoder_21-05-05--13-56-35',
+    #                'saves/cae-F-NestedDropoutAutoencoder_21-05-05--15-18-07']
+    # for model_save in model_saves:
+    #     cae_plots(model_save, device)
+    for model_save in os.listdir('saves'):
+        if model_save.startswith('cae'):
+            continue
+        cae_plots('saves/' + model_save, device, name=model_save)
 
 
 if __name__ == '__main__':
