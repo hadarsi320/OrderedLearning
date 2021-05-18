@@ -257,9 +257,14 @@ def cae_plots(model_save: str, device, name=None):
         model = ConvAutoencoder(**save_dict)
         if nested_dropout:
             model = NestedDropoutAutoencoder(model, **save_dict)
+        title = 'Convolutional Autoencoder'
 
     elif os.path.basename(model_save).startswith('classifier'):
         model = Classifier(**save_dict)
+        title = 'Classifier'
+
+    else:
+        raise NotImplementedError()
 
     model.eval()
     try:
@@ -269,7 +274,6 @@ def cae_plots(model_save: str, device, name=None):
         return None
 
     print(utils.get_num_parameters(model), '\n')
-    title = 'Convolutional Autoencoder'
     if nested_dropout:
         title = f'Nested Dropout {title}'
     if name is not None:
