@@ -9,7 +9,6 @@ from torch import nn
 from tqdm import tqdm
 
 import utils
-from data import imagenette
 from models import *
 from utils import get_device, get_data_representation
 
@@ -229,10 +228,14 @@ def plot_filters(model, title=None, output_shape=None):
     channels = shape[1]
 
     if output_shape is None:
-        output_shape = shape[:2]
+        total = shape[0] * shape[1]
+        div = math.ceil(total ** 0.5)
+        while total % div != 0:
+            div += 1
+        output_shape = (div, total // div)
     else:
         assert output_shape[1] % channels == 0
-        filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
+    filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
 
     fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[0] * 2, output_shape[1] * 2))
     for i, (filters, axes) in enumerate(zip(filter_matrix, axes_mat)):
@@ -246,7 +249,7 @@ def plot_filters(model, title=None, output_shape=None):
     plt.show()
 
 
-def cae_plots(model_save: str, device, name=None):
+def model_plots(model_save: str, device, name=None):
     if name is not None:
         print(name)
 
@@ -269,7 +272,7 @@ def cae_plots(model_save: str, device, name=None):
     model.eval()
     try:
         model.load_state_dict(save_dict['model'])
-    except:
+    except Exception as e:
         print('Save dict mismatch\n')
         return None
 
@@ -278,7 +281,7 @@ def cae_plots(model_save: str, device, name=None):
         title = f'Nested Dropout {title}'
     if name is not None:
         title += '\n' + name
-    plot_filters(model, title=title, output_shape=(8, 4))
+    plot_filters(model, title=title)
 
     # if nested_dropout:
     #     plot_images_by_channels(model, imagenette, True, 'Y')
@@ -297,7 +300,7 @@ def main():
     for model_save in os.listdir('saves'):
         if model_save.startswith('cae'):
             continue
-        cae_plots('saves/' + model_save, device, name=model_save)
+        model_plots('saves/' + model_save, device, name=model_save)
 
 
 if __name__ == '__main__':
