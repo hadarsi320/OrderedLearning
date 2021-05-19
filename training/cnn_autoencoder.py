@@ -8,7 +8,7 @@ from data import imagenette
 from models.autoencoders import ConvAutoencoder, NestedDropoutAutoencoder
 
 
-def main():
+def train_cae():
     # general options
     epochs = 50
     learning_rate = 1e-3
@@ -23,12 +23,12 @@ def main():
     # model options
     activation = 'ReLU'
     batch_norm = False
-    cae_mode = 'E'
+    cae_mode = 'G'
 
     # nested dropout options
     dropout_depth = 1
     p = 0.1
-    seq_bound = 2 ** 7
+    seq_bound = 2 ** 8
     tol = 1e-4
 
     dataloader = imagenette.get_dataloader(batch_size, normalize=normalize_data, image_mode=image_mode)

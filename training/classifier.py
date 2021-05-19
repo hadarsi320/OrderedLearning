@@ -11,7 +11,7 @@ from models.classifiers import Classifier
 def train_classifier():
     # general options
     epochs = 50
-    learning_rate = 1e-3
+    learning_rate = 1e-2
     normalize_data = True
     batch_size = 16
     loss_criterion = 'CrossEntropyLoss'
@@ -21,13 +21,13 @@ def train_classifier():
     channels = 1 if image_mode == 'Y' else 3
 
     # model options
-    num_classes = 10
     activation = 'ReLU'
     batch_norm = True
-    model_mode = 'A'
+    model_mode = 'B'
+    num_classes = 10
 
     # nested dropout options
-    apply_nested_dropout = True
+    apply_nested_dropout = False
     dropout_depth = 1
     p = 0.1
     seq_bound = 2 ** 8
@@ -39,8 +39,7 @@ def train_classifier():
                         channels=channels, normalize_data=normalize_data, plateau_limit=plateau_limit,
                         apply_nested_dropout=apply_nested_dropout)
     if apply_nested_dropout:
-        model_kwargs.update(
-            dict(dropout_depth=dropout_depth, p=p, sequence_bound=seq_bound, tol=tol))
+        model_kwargs.update(dict(dropout_depth=dropout_depth, p=p, sequence_bound=seq_bound, tol=tol))
     model = Classifier(**model_kwargs)
     optimizer = optim.Adam(params=model.parameters(), lr=learning_rate)
 
