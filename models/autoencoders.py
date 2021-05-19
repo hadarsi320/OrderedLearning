@@ -120,8 +120,8 @@ def create_cae(mode, starting_dim, **kwargs):
     activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
     normalized = kwargs.get('normalize_data', True)
     batch_norm = kwargs.get('batch_norm', True)
-
     channels = kwargs.get('channels', 3)
+
     dim = starting_dim
     encoder_layers = []
     decoder_layers = []
@@ -179,108 +179,75 @@ def create_cae(mode, starting_dim, **kwargs):
 
     elif mode == 'C':
         channels_list = [32, 32, 64, 64]
+        conv_args_list = [{'kernel_size': 4, 'stride': 2, 'padding': 1},
+                          {'kernel_size': 4, 'stride': 2, 'padding': 1},
+                          {'kernel_size': 4, 'stride': 2, 'padding': 1},
+                          {'kernel_size': 4, 'stride': 2, 'padding': 1}]
 
-        encoder_layers = []
-        decoder_layers = []
-        first = True
-        for new_channels in channels_list:
-            encoder_layers.append(nn.Conv2d(channels, new_channels, 4, stride=2, padding=1))
-            encoder_layers.append(activation_function())
-            if batch_norm:
-                encoder_layers.append(nn.BatchNorm2d(new_channels))
-
-            if first:
-                first = False
-                if not normalized:
-                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
-            else:
-                if batch_norm:
-                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
-                decoder_layers.insert(0, activation_function())
-            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, 4, stride=2, padding=1))
-
-            channels = new_channels
-            dim = dim / 2
+        encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                     activation_function, batch_norm, normalized)
 
     elif mode == 'D':
         channels_list = [8]
-        conv_args = {'kernel_size': 8, 'stride': 8}
+        conv_args_list = [{'kernel_size': 8, 'stride': 8}]
 
-        encoder_layers = []
-        decoder_layers = []
-        first = True
-        for new_channels in channels_list:
-            encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
-            encoder_layers.append(activation_function())
-            if batch_norm:
-                encoder_layers.append(nn.BatchNorm2d(new_channels))
-
-            if first:
-                first = False
-                if not normalized:
-                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
-            else:
-                if batch_norm:
-                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
-                decoder_layers.insert(0, activation_function())
-            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, **conv_args))
-
-            channels = new_channels
-            dim = dim / 2
+        encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                     activation_function, batch_norm, normalized)
 
     elif mode == 'E':
         channels_list = [64]
-        conv_args = {'kernel_size': 8, 'stride': 8}
+        conv_args_list = [{'kernel_size': 8, 'stride': 8}]
 
-        encoder_layers = []
-        decoder_layers = []
-        first = True
-        for new_channels in channels_list:
-            encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
-            encoder_layers.append(activation_function())
-            if batch_norm:
-                encoder_layers.append(nn.BatchNorm2d(new_channels))
-
-            if first:
-                first = False
-                if not normalized:
-                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
-            else:
-                if batch_norm:
-                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
-                decoder_layers.insert(0, activation_function())
-            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, **conv_args))
-
-            channels = new_channels
-            dim = dim / 2
+        encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                     activation_function, batch_norm, normalized)
 
     elif mode == 'F':
         channels_list = [64, 128, 128]
         conv_args_list = [{'kernel_size': 8, 'stride': 8},
                           {'kernel_size': 2, 'stride': 2},
                           {'kernel_size': 2, 'stride': 2}]
+        encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                     activation_function, batch_norm, normalized)
 
-        encoder_layers = []
-        decoder_layers = []
-        first = True
-        for new_channels, conv_args in zip(channels_list, conv_args_list):
-            encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
-            encoder_layers.append(activation_function())
-            if batch_norm:
-                encoder_layers.append(nn.BatchNorm2d(new_channels))
+    elif mode == 'G':
+        channels_list = [64, 32, 32, 32, 16, 16, 16]
+        conv_args_list = [{'kernel_size': 8, 'stride': 8},
+                          {'kernel_size': 2, 'stride': 2},
+                          {'kernel_size': 3, 'padding': 1},
+                          {'kernel_size': 3, 'padding': 1},
+                          {'kernel_size': 2, 'stride': 2},
+                          {'kernel_size': 3, 'padding': 1},
+                          {'kernel_size': 3, 'padding': 1}]
 
-            if first:
-                first = False
-                if not normalized:
-                    decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
-            else:
-                if batch_norm:
-                    decoder_layers.insert(0, nn.BatchNorm2d(channels))
-                decoder_layers.insert(0, activation_function())
-            decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, **conv_args))
+        encoder_layers, decoder_layers = \
+            generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                        activation_function, batch_norm, normalized)
 
-            channels = new_channels
     else:
         raise NotImplementedError(f'Mode {mode} not implemented')
 
     return nn.Sequential(*encoder_layers), nn.Sequential(*decoder_layers)
+
+
+def generate_autoencoder_layers(channels_list, conv_args_list, channels, activation_function, batch_norm, normalized):
+    encoder_layers = []
+    decoder_layers = []
+    first = True
+    for new_channels, conv_args in zip(channels_list, conv_args_list):
+        encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
+        encoder_layers.append(activation_function())
+        if batch_norm:
+            encoder_layers.append(nn.BatchNorm2d(new_channels))
+
+        if first:
+            first = False
+            if not normalized:
+                decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
+        else:
+            if batch_norm:
+                decoder_layers.insert(0, nn.BatchNorm2d(channels))
+            decoder_layers.insert(0, activation_function())
+        decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, **conv_args))
+
+        channels = new_channels
+    return encoder_layers, decoder_layers
