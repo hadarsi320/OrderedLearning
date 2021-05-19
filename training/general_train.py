@@ -7,6 +7,8 @@ import utils
 from torch import optim
 from torch.utils.data import DataLoader
 
+__all__ = ['train']
+
 
 def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int, loss_criterion: str,
           model_dir: str, plateau_limit: int, nested_dropout: bool, reconstruct: bool, **kwargs):
