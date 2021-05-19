@@ -7,55 +7,80 @@ __all__ = ['Classifier']
 
 
 class Classifier(nn.Module):
-    def __init__(self, mode: str, num_classes: int, apply_nested_dropout: bool, **kwargs):
+    def __init__(self, mode: str, num_classes: int, apply_nested_dropout: bool = False, **kwargs):
         super(Classifier, self).__init__()
-        self._mode = mode
-        self._num_classes = num_classes
+        self.mode = mode
+        self.num_classes = num_classes
         self.apply_nested_dropout = apply_nested_dropout
         self._classifier = self.__create_classifier(**kwargs)
 
     def __create_classifier(self, **kwargs):
+        if self.mode == 'A':
+            channels_list = [32, 64, 64, 128]
+            conv_args_list = [{'kernel_size': 8, 'stride': 8},
+                              {'kernel_size': 2, 'stride': 2},
+                              {'kernel_size': 2, 'stride': 2},
+                              {'kernel_size': 7, 'stride': 7}]
+            dims_list = [100, self.num_classes]
+            layers = self.__generate_layers(channels_list, conv_args_list, dims_list,
+                                            **kwargs)
+
+        elif self.mode == 'B':
+            channels_list = [64, 64]
+            conv_args_list = [{'kernel_size': 8, 'stride': 8},
+                              {'kernel_size': 3, 'padding': 1}]
+
+            for curr_channels in [128, 256]:
+                for i in range(2):
+                    channels_list.append(curr_channels)
+                    conv_args = {'kernel_size': 3, 'padding': 1}
+                    if i == 0:
+                        conv_args['stride'] = 2
+                    conv_args_list.append(conv_args)
+
+            dims_list = [1000, self.num_classes]
+            average_pool = nn.AvgPool2d(kernel_size=7)
+            layers = self.__generate_layers(channels_list, conv_args_list, dims_list, **kwargs,
+                                            final_pooling=average_pool)
+
+        else:
+            raise NotImplementedError(f'Mode {self.mode} not implemented')
+
+        return nn.Sequential(*layers)
+
+    def __generate_layers(self, channels_list, conv_args_list, dims_list, **kwargs):
         activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
         batch_norm = kwargs.get('batch_norm', True)
         channels = kwargs.get('channels', 3)
         apply_nested_dropout = self.apply_nested_dropout
 
         layers = []
-        if self._mode == 'A':
-            channels_list = [32, 64, 64, 128]
-            conv_args_list = [{'kernel_size': 8, 'stride': 8},
-                              {'kernel_size': 2, 'stride': 2},
-                              {'kernel_size': 2, 'stride': 2},
-                              {'kernel_size': 7, 'stride': 7}]
-            dims = [100, self._num_classes]
+        last_channels = channels
+        for channels, conv_args in zip(channels_list, conv_args_list):
+            layers.append(nn.Conv2d(last_channels, channels, **conv_args))
+            if batch_norm:
+                layers.append(nn.BatchNorm2d(channels))
+            layers.append(activation_function())
 
+            if apply_nested_dropout:
+                self._dropout_layer = NestedDropout(**kwargs)
+                layers.append(self._dropout_layer)
+                apply_nested_dropout = False
             last_channels = channels
-            for channels, conv_args in zip(channels_list, conv_args_list):
-                layers.append(nn.Conv2d(last_channels, channels, **conv_args))
+
+        if 'final_pooling' in kwargs:
+            layers.append(kwargs['final_pooling'])
+        layers.append(nn.Flatten(-3))
+
+        last_dim = channels_list[-1]
+        for i, dim in enumerate(dims_list):
+            layers.append(nn.Linear(last_dim, dim))
+            if i + 1 < len(dims_list):
                 layers.append(activation_function())
-                if batch_norm:
-                    layers.append(nn.BatchNorm2d(channels))
-                if apply_nested_dropout:
-                    self._dropout_layer = NestedDropout(**kwargs)
-                    layers.append(self._dropout_layer)
-                    apply_nested_dropout = False
-                last_channels = channels
-
-            layers.append(nn.Flatten(-3))
-
-            last_dim = channels_list[-1]
-            for i, dim in enumerate(dims):
-                layers.append(nn.Linear(last_dim, dim))
-                if i + 1 < len(dims):
-                    layers.append(activation_function())
-                    # if batch_norm:
-                    #     layers.append(nn.BatchNorm1d(dim))
-                last_dim = dim
-
-        else:
-            raise NotImplementedError(f'Mode {self._mode} not implemented')
-
-        return nn.Sequential(*layers)
+                # if batch_norm:
+                #     layers.append(nn.BatchNorm1d(dim))
+            last_dim = dim
+        return layers
 
     def forward(self, x):
         x = self._classifier(x)
