@@ -1,12 +1,12 @@
-import os
 from math import log2, ceil, floor
 
 import numpy as np
 import torch
 import torch.nn as nn
-
 from torch import linalg
 from tqdm import tqdm
+
+import utils
 
 
 def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout_p=0.2):
@@ -66,7 +66,7 @@ def estimate_code_variance(autoencoder, batch, batch_repr=None):
 
 
 @torch.no_grad()
-def get_model_loss(model, dataloader, loss_function, device, sample=None):
+def get_model_loss(model, dataloader, loss_function, device=utils.get_device(), sample=None):
     model.eval()
     losses = []
     total = min(len(dataloader), sample) if sample is not None else len(dataloader)

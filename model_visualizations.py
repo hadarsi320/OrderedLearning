@@ -222,8 +222,8 @@ def plot_cae_reconstruction_error(nd_autoencoder, dataloader):
 
 
 @torch.no_grad()
-def plot_filters(model, title=None, output_shape=None):
-    filter_matrix, _ = model.get_weights(1)
+def plot_filters(model, title=None, output_shape=None, cmap='Greys'):
+    filter_matrix = model.get_weights(1)[0].numpy()
     shape = filter_matrix.shape
     channels = shape[1]
 
@@ -237,12 +237,13 @@ def plot_filters(model, title=None, output_shape=None):
         assert output_shape[1] % channels == 0
     filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
 
-    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[0] * 2, output_shape[1] * 2))
+    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[0] * 1,
+                                                         output_shape[1] * 1))
     for i, (filters, axes) in enumerate(zip(filter_matrix, axes_mat)):
         for j, (filter, axis) in enumerate(zip(filters, axes)):
             axis.set_xticks([])
             axis.set_yticks([])
-            axis.imshow(filter, cmap='Greys')
+            axis.imshow(filter, cmap=cmap)
     if title is not None:
         fig.suptitle(title)
     plt.tight_layout()
@@ -276,7 +277,7 @@ def model_plots(model_save: str, device, name=None):
         print('Save dict mismatch\n')
         return None
 
-    print(utils.get_num_parameters(model), '\n')
+    print(f'The model has {utils.get_num_parameters(model)} parameters', '\n')
     if nested_dropout:
         title = f'Nested Dropout {title}'
     if name is not None:
@@ -291,16 +292,9 @@ def model_plots(model_save: str, device, name=None):
 
 def main():
     device = utils.get_device()
-    model_saves = ['saves/cae-F-ConvAutoencoder_21-05-06--09-26-54',
-                   'saves/cae-F-NestedDropoutAutoencoder_21-05-06--00-27-18']
-    # model_saves = ['saves/cae-F-ConvAutoencoder_21-05-05--13-56-35',
-    #                'saves/cae-F-NestedDropoutAutoencoder_21-05-05--15-18-07']
-    # for model_save in model_saves:
-    #     cae_plots(model_save, device)
     for model_save in os.listdir('saves'):
-        if model_save.startswith('cae'):
-            continue
-        model_plots('saves/' + model_save, device, name=model_save)
+        if model_save.startswith('cae-G'):
+            model_plots('saves/' + model_save, device, name=model_save)
 
 
 if __name__ == '__main__':
