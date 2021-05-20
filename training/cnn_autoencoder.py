@@ -47,7 +47,6 @@ def train_cae():
     current_time = utils.current_time()
     model_name = f'cae-{cae_mode}-{type(model).__name__}_{current_time}'
     model_dir = f'{utils.save_dir}/{model_name}'
-    os.mkdir(model_dir)
 
     # train(model, optimizer, dataloader, model_dir, epochs, **model_kwargs)
     nested_dropout = isinstance(model, NestedDropoutAutoencoder)
