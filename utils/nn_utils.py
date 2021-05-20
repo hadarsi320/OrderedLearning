@@ -1,3 +1,4 @@
+import os
 from math import log2, ceil, floor
 
 import numpy as np
@@ -71,7 +72,7 @@ def get_model_loss(model, dataloader, loss_function, device=utils.get_device(), 
     losses = []
     total = min(len(dataloader), sample) if sample is not None else len(dataloader)
     for i, (x, y) in tqdm(enumerate(dataloader), total=total):
-        if sample is not None and i == sample:
+        if i == total:
             break
         x, y = x.to(device), y.to(device)
         res = model(x)
@@ -79,8 +80,22 @@ def get_model_loss(model, dataloader, loss_function, device=utils.get_device(), 
     return np.average(losses)
 
 
+@torch.no_grad()
+def get_model_accuracy(model, dataloader, device=utils.get_device()):
+    model.eval()
+    correct = []
+    for x, y in dataloader:
+        x, y = x.to(device), y.to(device)
+        prediction = model.predict(x)
+        correct.extend((prediction == y).numpy())
+    return np.average(correct)
+
+
 def save_model(model, optimizer, file_name, **kwargs):
-    # if isinstance(model, NestedDropoutAutoencoder):
+    file_dir = os.path.dirname(file_name)
+    if not os.path.exists(file_dir):
+        os.mkdir(file_dir)
+
     if type(model).__name__ == 'NestedDropoutAutoencoder':
         kwargs['converged_unit'] = model.get_converged_unit()
         kwargs['has_converged'] = model.has_converged()
