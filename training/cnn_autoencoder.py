@@ -28,8 +28,8 @@ def train_cae():
     # nested dropout options
     dropout_depth = 1
     p = 0.1
-    seq_bound = 2 ** 8
-    tol = 1e-4
+    seq_bound = 2 ** 2
+    tol = 1e-3
 
     dataloader = imagenette.get_dataloader(batch_size, normalize=normalize_data, image_mode=image_mode)
     model_kwargs = dict(mode=cae_mode, activation=activation, loss_criterion=loss_criterion,
