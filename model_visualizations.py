@@ -9,6 +9,8 @@ from torch import nn
 from tqdm import tqdm
 
 import utils
+import utils.image_utils
+from data import imagenette
 from models import *
 from utils import get_device, get_data_representation
 
@@ -228,29 +230,32 @@ def plot_filters(model, title=None, output_shape=None, cmap='Greys'):
     channels = shape[1]
 
     if output_shape is None:
-        total = shape[0] * shape[1]
-        div = math.ceil(total ** 0.5)
-        while total % div != 0:
-            div += 1
-        output_shape = (div, total // div)
+        output_shape = utils.square_shape(*shape[:2])
     else:
         assert output_shape[1] % channels == 0
+        assert shape[0] * shape[1] == output_shape[0] * output_shape[1]
     filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
-
-    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[0] * 1,
-                                                         output_shape[1] * 1))
-    for i, (filters, axes) in enumerate(zip(filter_matrix, axes_mat)):
-        for j, (filter, axis) in enumerate(zip(filters, axes)):
-            axis.set_xticks([])
-            axis.set_yticks([])
-            axis.imshow(filter, cmap=cmap)
-    if title is not None:
-        fig.suptitle(title)
-    plt.tight_layout()
-    plt.show()
+    utils.plot_subfigures(filter_matrix, cmap=cmap, title=title)
 
 
-def model_plots(model_save: str, device, name=None):
+@torch.no_grad()
+def plot_feature_maps(conv_layer, image):
+    # plt.imshow(image)
+    # plt.xticks([])
+    # plt.yticks([])
+    # plt.title('Original Image')
+    # plt.show()
+
+    feature_maps = conv_layer(image).numpy()
+    shape = feature_maps.shape
+    shape[:2] = utils.square_shape(*shape[:2])
+    np.reshape(feature_maps, shape)
+
+    utils.plot_subfigures(feature_maps, title='Feature Maps')
+
+
+@torch.no_grad()
+def model_plots(model_save: str, device, name=None, image=None):
     if name is not None:
         print(name)
 
@@ -282,7 +287,11 @@ def model_plots(model_save: str, device, name=None):
         title = f'Nested Dropout {title}'
     if name is not None:
         title += '\n' + name
-    plot_filters(model, title=title)
+    # plot_filters(model, title=title)
+
+    if image is not None:
+        conv = list(list(model.children())[-1].children())[0]
+        plot_feature_maps(conv, image)
 
     # if nested_dropout:
     #     plot_images_by_channels(model, imagenette, True, 'Y')
@@ -291,10 +300,23 @@ def model_plots(model_save: str, device, name=None):
 
 
 def main():
+    torch.random.manual_seed(32)
+
     device = utils.get_device()
-    for model_save in os.listdir('saves'):
-        if model_save.startswith('cae-G'):
-            model_plots('saves/' + model_save, device, name=model_save)
+    dataloader = imagenette.get_dataloader()
+    image = next(iter(dataloader))[0]
+
+    plot_image = imagenette.unnormalize(image.squeeze(), 'Y')
+    # plot_image = utils.image_utils.to_rgb(image.view(image.shape[1:]), 'Y').permute(1, 2, 0)
+    plt.imshow(plot_image)
+    plt.xticks([])
+    plt.yticks([])
+    plt.title('Original Image')
+    plt.show()
+
+    # for model_save in os.listdir('saves'):
+    #     if model_save.startswith('classifier-C'):
+    #         model_plots('saves/' + model_save, device, name=model_save, image=image)
 
 
 if __name__ == '__main__':
