@@ -15,6 +15,10 @@ class Classifier(nn.Module):
         self._classifier = self.__create_classifier(**kwargs)
 
     def __create_classifier(self, **kwargs):
+        act_function = getattr(nn, kwargs.get('activation', 'ReLU'))
+        batch_norm = kwargs.get('batch_norm', True)
+        channels = kwargs.get('channels', 3)
+
         if self.mode == 'A':
             channels_list = [32, 64, 64, 128]
             conv_args_list = [{'kernel_size': 8, 'stride': 8},
@@ -43,13 +47,37 @@ class Classifier(nn.Module):
             layers = self.__generate_layers(channels_list, conv_args_list, dims_list, **kwargs,
                                             final_pooling=average_pool)
 
+        elif self.mode == 'C':
+            planes = 64
+            layers = [nn.Conv2d(channels, 64, kernel_size=8, stride=8),
+                      # nn.BatchNorm2d(64),
+                      # act_function(),
+                      ]
+            if self.apply_nested_dropout:
+                self._dropout_layer = NestedDropout(**kwargs)
+                layers.append(self._dropout_layer)
+
+            for reps in [6, 3]:
+                for i in range(reps):
+                    if i == 0:
+                        layers.append(BasicBlock(planes, activation_layer=act_function, batch_norm=batch_norm,
+                                                 downsampling=True))
+                        planes = planes * 2
+                    else:
+                        layers.append(BasicBlock(planes, activation_layer=act_function, batch_norm=batch_norm))
+            layers.append(nn.AvgPool2d(kernel_size=7))
+            layers.append(nn.Flatten(-3))
+            layers.append(nn.Linear(planes, 1000))
+            layers.append(nn.Linear(1000, self.num_classes))
+
         else:
             raise NotImplementedError(f'Mode {self.mode} not implemented')
 
-        return nn.Sequential(*layers)
+        sequential = nn.Sequential(*layers)
+        return sequential
 
     def __generate_layers(self, channels_list, conv_args_list, dims_list, **kwargs):
-        activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
+        act_function = getattr(nn, kwargs.get('activation', 'ReLU'))
         batch_norm = kwargs.get('batch_norm', True)
         channels = kwargs.get('channels', 3)
         apply_nested_dropout = self.apply_nested_dropout
@@ -60,7 +88,7 @@ class Classifier(nn.Module):
             layers.append(nn.Conv2d(last_channels, channels, **conv_args))
             if batch_norm:
                 layers.append(nn.BatchNorm2d(channels))
-            layers.append(activation_function())
+            layers.append(act_function())
 
             if apply_nested_dropout:
                 self._dropout_layer = NestedDropout(**kwargs)
@@ -76,7 +104,7 @@ class Classifier(nn.Module):
         for i, dim in enumerate(dims_list):
             layers.append(nn.Linear(last_dim, dim))
             if i + 1 < len(dims_list):
-                layers.append(activation_function())
+                layers.append(act_function())
                 # if batch_norm:
                 #     layers.append(nn.BatchNorm1d(dim))
             last_dim = dim
@@ -88,7 +116,7 @@ class Classifier(nn.Module):
 
     def predict(self, x):
         x = self(x)
-        x = torch.softmax(x, -1)
+        x = torch.argmax(x, -1)
         return x
 
     def has_converged(self):
