@@ -9,6 +9,7 @@ from data.constants import IMAGENETTE_Y_MEAN, IMAGENETTE_Y_STD
 
 def get_dataloader(train=True, batch_size=1, normalize=True, image_mode='Y'):
     data_dir = utils.imagenette_train_dir if train else utils.imagenette_eval_dir
+
     transform_list = []
     if image_mode in ['Y', 'YCbCr']:
         transform_list.append(transforms.Lambda(lambda image: image.convert('YCbCr')))
@@ -25,7 +26,7 @@ def get_dataloader(train=True, batch_size=1, normalize=True, image_mode='Y'):
 
     transform = transforms.Compose(transform_list)
     dataset = torchvision.datasets.ImageFolder(data_dir, transform=transform)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=train)
     return dataloader
 
 
@@ -38,7 +39,8 @@ def load_data(dataloader=None, normalize=True):
 def unnormalize(im: torch.Tensor, im_format):
     if im.dim() == 2:
         im = im.unsqueeze(0)
-    if im.shape == (1, 224, 224):
+
+    if im.shape == (1, 224, 224) and im_format == 'Y':
         return utils.restore_image(im, IMAGENETTE_Y_MEAN, IMAGENETTE_Y_STD, im_format)
     else:
-        raise NotImplementedError('Unnormalization not implemented for said shape')
+        raise NotImplementedError(f'Unnormalization not implemented for shape {im.shape} and format {im_format}')
