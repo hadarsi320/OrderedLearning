@@ -4,7 +4,7 @@ from datetime import datetime
 import torch
 import matplotlib.pyplot as plt
 
-import utils
+from utils import to_rgb
 
 
 def restore_image(image, mean, std, im_format='RGB') -> torch.tensor:
@@ -12,17 +12,6 @@ def restore_image(image, mean, std, im_format='RGB') -> torch.tensor:
     mean = torch.tensor(mean).unsqueeze(-1).unsqueeze(-1)
     restored_image = std * image + mean
     return to_rgb(restored_image, im_format).permute(1, 2, 0)
-
-
-def to_rgb(image, im_format):
-    if im_format == 'RGB':
-        return image
-    elif im_format == 'Y':
-        return utils.y_to_rgb(image)
-    elif im_format == 'YCbCr':
-        return utils.ycbcr_to_rgb(image)
-    else:
-        raise NotImplementedError()
 
 
 def plot_image(image):
@@ -64,3 +53,18 @@ def adaptable_round(number, precision):
 
 def format_time(seconds):
     return time.strftime('%H:%M:%S', time.gmtime(seconds))
+
+
+def plot_subfigures(images, cmap=None, title=None, figsize_scale=1):
+    output_shape = images.shape[:2]
+    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[1] * figsize_scale,
+                                                         output_shape[0] * figsize_scale))
+    for i, (image_row, axes) in enumerate(zip(images, axes_mat)):
+        for j, (image, axis) in enumerate(zip(image_row, axes)):
+            axis.set_xticks([])
+            axis.set_yticks([])
+            axis.imshow(image, cmap=cmap)
+    if title is not None:
+        fig.suptitle(title)
+    plt.tight_layout()
+    plt.show()
