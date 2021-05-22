@@ -10,19 +10,22 @@ from torch.utils.data import DataLoader
 __all__ = ['train']
 
 
-def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int, loss_criterion: str,
-          model_dir: str, plateau_limit: int, nested_dropout: bool, reconstruct: bool, **kwargs):
+def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int,
+          loss_criterion: str, model_dir: str, plateau_limit: int, nested_dropout: bool, reconstruct: bool, **kwargs):
     print(f'The model has {utils.get_num_parameters(model)} parameters')
+    testloader = kwargs.pop('testloader', None)
 
     loss_function = getattr(nn, loss_criterion)()
     batch_print = len(dataloader) // 5
 
     model.train()
     device = utils.get_device()
-    model.to(device)
+    model.to(device)  # TODO check if this actually does anything
 
     losses = []
+    accuracies = []
     best_loss = float('inf')
+    best_accuracy = 0
     plateau = 0
     train_time = 0
     for epoch in range(epochs):
@@ -64,16 +67,34 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
         train_time += epoch_time
 
         print(f'\tTotal epoch loss {epoch_loss}')
-        print(f'\tEpoch time {utils.format_time(epoch_time)}\n')
-        if epoch_loss < best_loss:
+
+        model_save_kwargs = dict(**kwargs, epoch=epoch, train_time=utils.format_time(train_time), losses=losses)
+        has_improved = False
+        if testloader is not None:
+            model.eval()
+            eval_accuracy = round(utils.get_model_accuracy(model, testloader, device), 3)
+            model.train()
+            accuracies.append(eval_accuracy)
+            print(f'\tEvaluation accuracy {eval_accuracy}')
+
+            if eval_accuracy > best_accuracy:
+                best_accuracy = eval_accuracy
+                has_improved = True
+                model_save_kwargs.update(accuracies=accuracies, best_accuracy=best_accuracy)
+
+        elif epoch_loss < best_loss:
             best_loss = epoch_loss
-            utils.save_model(model, optimizer, f'{model_dir}/model', losses=losses, best_loss=best_loss,
-                             epoch=epoch, train_time=utils.format_time(train_time), **kwargs)
+            has_improved = True
+            model_save_kwargs.update(best_loss=best_loss)
+
+        print(f'\tEpoch time {utils.format_time(epoch_time)}\n')
+        if has_improved:
+            utils.save_model(model, optimizer, f'{model_dir}/model', **model_save_kwargs)
             plateau = 0
         else:
             plateau += 1
 
-        if plateau == plateau_limit or (nested_dropout is True and model.has_converged()):
+        if (plateau == plateau_limit) or (nested_dropout is True and model.has_converged()):
             break
 
     if nested_dropout is True and model.has_converged():
