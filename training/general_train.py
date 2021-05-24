@@ -99,10 +99,13 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
 
     if nested_dropout is True and model.has_converged():
         end = 'nested dropout has converged'
+        print('Nested dropout has converged!')
     elif plateau == plateau_limit:
         end = 'has plateaued'
+        print('The model has plateaued...')
     else:
         end = f'reached max number of epochs ({epochs})'
+        print('The maximum number of epochs has been reached...')
     utils.update_save(f'{model_dir}/model', end=end)
 
     return losses
