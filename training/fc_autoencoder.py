@@ -233,7 +233,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, n
     autoencoder = FCAutoencoder(3072, repr_dim, deep=deep, activation=activation)
 
     if nested_dropout:
-        model_name = f'nestedDropoutAutoencoder_{deep_str}_{utils.current_time()}'
+        model_name = f'nestedDropoutAutoencoder_{deep_str}_{utils.get_current_time()}'
         print('Training nested dropout autoencoder')
         output = fit_nested_dropout_autoencoder(autoencoder, dataloader, learning_rate,
                                                 epochs, model_name,
@@ -241,7 +241,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, n
                                                 bound=bound, epoch_print=epoch_print,
                                                 save_models=True, save_plots=False, eps=eps)
     else:
-        model_name = f'vanillaAutoencoder_{deep_str}_{utils.current_time()}'
+        model_name = f'vanillaAutoencoder_{deep_str}_{utils.get_current_time()}'
         print('Training vanilla autoencoder')
         output = fit_vanilla_autoencoder(autoencoder, dataloader, learning_rate, epochs, model_name)
     output['parameters'] = model_params

@@ -28,7 +28,7 @@ def train_cae():
     # nested dropout options
     dropout_depth = 1
     p = 0.1
-    seq_bound = 2 ** 2
+    seq_bound = 2 ** 8
     tol = 1e-3
 
     dataloader = imagenette.get_dataloader(batch_size, normalize=normalize_data, image_mode=image_mode)
@@ -44,11 +44,11 @@ def train_cae():
     if 'optimizer_state' in model_kwargs:
         optimizer.load_state_dict(model_kwargs.pop('optimizer_state'))
 
-    current_time = utils.current_time()
+    current_time = utils.get_current_time()
     model_name = f'cae-{cae_mode}-{type(model).__name__}_{current_time}'
     model_dir = f'{utils.save_dir}/{model_name}'
 
     # train(model, optimizer, dataloader, model_dir, epochs, **model_kwargs)
     nested_dropout = isinstance(model, NestedDropoutAutoencoder)
     return training.train(model, optimizer, dataloader, model_dir=model_dir, reconstruct=True, epochs=epochs,
-                          nested_dropout=nested_dropout, **model_kwargs)
+                          apply_nested_dropout=nested_dropout, **model_kwargs)

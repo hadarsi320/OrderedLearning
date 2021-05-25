@@ -45,7 +45,7 @@ def evaluate_retrieval_method(data_repr: torch.Tensor, retrieval_method, code_le
 
 def test_retrieval_times():
     binary_tree_pickle = 'pickles/binary_tree_64.pkl'
-    current_time = utils.current_time()
+    current_time = utils.get_current_time()
 
     data = cifar10.load_data()
     print('Data loaded')

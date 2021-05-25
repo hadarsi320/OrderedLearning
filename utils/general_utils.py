@@ -29,7 +29,7 @@ def binarize_data(data: torch.Tensor, bin_quantile=0.5):
     return binarized
 
 
-def current_time():
+def get_current_time():
     return datetime.now().strftime('%y-%m-%d--%H-%M-%S')
 
 
