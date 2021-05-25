@@ -126,7 +126,7 @@ def fit_dim(tensor: torch.Tensor, target: torch.Tensor):
 
 
 def get_num_parameters(model):
-    return f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}'
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 @torch.no_grad()
