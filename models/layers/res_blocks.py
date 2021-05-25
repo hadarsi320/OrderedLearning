@@ -4,28 +4,27 @@ __all__ = ['BasicBlock', 'BottleneckBlock']
 
 
 class BasicBlock(nn.Module):
-    def __init__(self, in_planes: int, activation_layer=nn.ReLU, batch_norm=True, downsampling=False):
+    def __init__(self, in_planes: int, out_planes: int, activation_layer=nn.ReLU, batch_norm=True, downsampling=False):
         super(BasicBlock, self).__init__()
         self.downsampling = downsampling
         self.batch_norm = batch_norm
 
-        if self.downsampling:
-            planes = in_planes * 2
-            self.conv1 = conv3x3(in_planes, planes, stride=2)
+        stride = 2 if self.downsampling else 1
+        self.conv1 = conv3x3(in_planes, out_planes, stride=stride)
 
-            self.skip = conv1x1(in_planes, planes, stride=2)
+        if self.downsampling or in_planes != out_planes:
+            self.skip = conv1x1(in_planes, out_planes, stride=stride)
             if self.batch_norm:
-                self.skip_bn = nn.BatchNorm2d(planes)
+                self.skip_bn = nn.BatchNorm2d(out_planes)
         else:
-            planes = in_planes
-            self.conv1 = conv3x3(in_planes, planes)
+            self.skip = None
 
         if batch_norm:
-            self.bn1 = nn.BatchNorm2d(planes)
+            self.bn1 = nn.BatchNorm2d(out_planes)
         self.act1 = activation_layer()
-        self.conv2 = conv3x3(planes, planes)
+        self.conv2 = conv3x3(out_planes, out_planes)
         if batch_norm:
-            self.bn2 = nn.BatchNorm2d(planes)
+            self.bn2 = nn.BatchNorm2d(out_planes)
 
         self.act2 = activation_layer()
 
@@ -41,7 +40,7 @@ class BasicBlock(nn.Module):
         if self.batch_norm:
             out = self.bn2(out)
 
-        if self.downsampling:
+        if self.skip is not None:
             identity = self.skip(identity)
             if self.batch_norm:
                 identity = self.skip_bn(identity)
@@ -52,6 +51,7 @@ class BasicBlock(nn.Module):
 
 
 class BottleneckBlock(nn.Module):
+    # TODO add out_planes like in BasicBlock
     def __init__(self, in_planes: int, activation_layer=nn.ReLU, batch_norm=True, downsampling=False):
         """
         A bottleneck block from the ResNet model
