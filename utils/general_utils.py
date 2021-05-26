@@ -41,14 +41,14 @@ def get_device():
     return torch.device('cpu')
 
 
-def adaptable_round(number, precision):
+def format_number(number, precision=3):
     if number == 0:
         return number
-    while True:
-        round_number = round(number, ndigits=precision)
-        if round_number != 0:
-            return round_number
-        precision += 1
+
+    if round(number, ndigits=precision) != 0:
+        return round(number, ndigits=precision)
+
+    return f'{number:.{precision}e}'
 
 
 def format_time(seconds):
