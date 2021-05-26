@@ -11,9 +11,11 @@ __all__ = ['train']
 
 
 def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int,
-          loss_criterion: str, model_dir: str, plateau_limit: int, nested_dropout: bool, reconstruct: bool, **kwargs):
-    print(f'The model has {utils.get_num_parameters(model)} parameters')
+          loss_criterion: str, model_dir: str, plateau_limit: int, apply_nested_dropout: bool,
+          reconstruct: bool, **kwargs):
+    print(f'The model has {utils.get_num_parameters(model):,} parameters')
     testloader = kwargs.pop('testloader', None)
+    lr_scheduler = kwargs.pop('lr_scheduler', None)
 
     loss_function = getattr(nn, loss_criterion)()
     batch_print = len(dataloader) // 5
@@ -31,7 +33,7 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
     for epoch in range(epochs):
         epoch_start = time.time()
         line = f'\tEpoch {epoch + 1}/{epochs}'
-        if nested_dropout and epoch > 0:
+        if apply_nested_dropout and epoch > 0:
             line += f' ({model.get_converged_unit()}/{model.get_dropout_dim()} converged units)'
         print(line)
 
@@ -52,21 +54,21 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
 
             batch_losses.append(loss.item())
             if (i + 1) % batch_print == 0:
-                batch_loss = utils.adaptable_round(np.average(batch_losses[-batch_print:]), 3)
+                batch_loss = utils.format_number(np.average(batch_losses[-batch_print:]))
                 print(f'Batch {i + 1} loss: {batch_loss}')
 
-            if nested_dropout:
+            if apply_nested_dropout:
                 model(X)
                 if model.has_converged():
                     break
 
-        epoch_loss = utils.adaptable_round(np.average(batch_losses), 3)
+        epoch_loss = utils.format_number(np.average(batch_losses))
         losses.append(epoch_loss)
 
         epoch_time = time.time() - epoch_start
         train_time += epoch_time
 
-        print(f'\tTotal epoch loss {epoch_loss}')
+        print(f'\tEpoch loss {epoch_loss}')
 
         model_save_kwargs = dict(**kwargs, epoch=epoch, train_time=utils.format_time(train_time), losses=losses)
         has_improved = False
@@ -82,6 +84,9 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
                 has_improved = True
                 model_save_kwargs.update(accuracies=accuracies, best_accuracy=best_accuracy)
 
+            if lr_scheduler is not None:
+                lr_scheduler.step(eval_accuracy)
+
         elif epoch_loss < best_loss:
             best_loss = epoch_loss
             has_improved = True
@@ -94,10 +99,10 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
         else:
             plateau += 1
 
-        if (plateau == plateau_limit) or (nested_dropout is True and model.has_converged()):
+        if (plateau == plateau_limit) or (apply_nested_dropout is True and model.has_converged()):
             break
 
-    if nested_dropout is True and model.has_converged():
+    if apply_nested_dropout is True and model.has_converged():
         end = 'nested dropout has converged'
         print('Nested dropout has converged!')
     elif plateau == plateau_limit:
