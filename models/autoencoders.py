@@ -60,12 +60,13 @@ class FCAutoencoder(Autoencoder):
 
 
 class ConvAutoencoder(Autoencoder):
-    def __init__(self, mode='A', dim=32, **kwargs):
+    def __init__(self, mode='A', **kwargs):
         super(ConvAutoencoder, self).__init__()
-        self._encoder, self._decoder = create_cae(mode, dim, **kwargs)
+        self._encoder, self._decoder = create_cae(mode, **kwargs)
 
 
 class NestedDropoutAutoencoder(Autoencoder):
+    # TODO merge this with the original autoencoder module
     def __init__(self, autoencoder: Autoencoder, dropout_depth=None, **kwargs):
         super(NestedDropoutAutoencoder, self).__init__()
         self._encoder = autoencoder._encoder
@@ -116,17 +117,17 @@ class NestedDropoutAutoencoder(Autoencoder):
         return self._dropout_layer.dropout_dim
 
 
-def create_cae(mode, starting_dim, **kwargs):
+def create_cae(mode, **kwargs):
     activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
     normalized = kwargs.get('normalize_data', True)
     batch_norm = kwargs.get('batch_norm', True)
     channels = kwargs.get('channels', 3)
 
-    dim = starting_dim
     encoder_layers = []
     decoder_layers = []
 
     if mode == 'A':
+        dim = 32
         filter_size = 2
         first = True
         while dim >= filter_size:
@@ -218,6 +219,17 @@ def create_cae(mode, starting_dim, **kwargs):
                           {'kernel_size': 2, 'stride': 2},
                           {'kernel_size': 3, 'padding': 1},
                           {'kernel_size': 3, 'padding': 1}]
+
+        encoder_layers, decoder_layers = \
+            generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                        activation_function, batch_norm, normalized)
+
+    elif mode == 'H':
+        channels_list = [64, 32, 16]
+        conv_args_list = [{'kernel_size': 8, 'stride': 8},
+                          {'kernel_size': 2, 'stride': 2},
+                          {'kernel_size': 2, 'stride': 2},
+                          ]
 
         encoder_layers, decoder_layers = \
             generate_autoencoder_layers(channels_list, conv_args_list, channels,
