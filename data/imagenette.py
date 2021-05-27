@@ -7,12 +7,14 @@ import utils
 from data.constants import IMAGENETTE_Y_MEAN, IMAGENETTE_Y_STD
 
 
-def get_dataloader(train=True, batch_size=1, normalize=True, image_mode='Y'):
+def get_dataloader(train=True, batch_size=1, normalize=True, image_mode='Y', random_flip=False):
     data_dir = utils.imagenette_train_dir if train else utils.imagenette_eval_dir
 
     transform_list = []
     if image_mode in ['Y', 'YCbCr']:
         transform_list.append(transforms.Lambda(lambda image: image.convert('YCbCr')))
+    if random_flip:
+        transform_list.append(transforms.RandomHorizontalFlip())
     transform_list.extend([transforms.Resize((224, 224)),
                            transforms.ToTensor()])
     if image_mode == 'Y':
