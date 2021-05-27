@@ -47,9 +47,9 @@ class Classifier(nn.Module):
             layers = self.__generate_layers(channels_list, conv_args_list, dims_list, **kwargs,
                                             final_pooling=average_pool)
 
-        elif self.mode == 'C':
+        elif self.mode == 'ResNet34':
             planes = 64
-            layers = [nn.Conv2d(channels, 64, kernel_size=8, stride=8),
+            layers = [nn.Conv2d(channels, planes, kernel_size=8, stride=8),
                       # nn.BatchNorm2d(64),
                       # act_function(),
                       ]
@@ -57,18 +57,21 @@ class Classifier(nn.Module):
                 self._dropout_layer = NestedDropout(**kwargs)
                 layers.append(self._dropout_layer)
 
-            for reps in [6, 3]:
+            for reps in [4, 6, 3]:
+                out_planes = planes * 2
                 for i in range(reps):
-                    if i == 0:
-                        layers.append(BasicBlock(planes, activation_layer=act_function, batch_norm=batch_norm,
-                                                 downsampling=True))
-                        planes = planes * 2
-                    else:
-                        layers.append(BasicBlock(planes, activation_layer=act_function, batch_norm=batch_norm))
+                    down_sampling = i == 0 and reps != 4
+                    layers.append(BasicBlock(planes, out_planes, activation_layer=act_function,
+                                             batch_norm=batch_norm, downsampling=down_sampling))
+                    planes = out_planes
+
             layers.append(nn.AvgPool2d(kernel_size=7))
             layers.append(nn.Flatten(-3))
             layers.append(nn.Linear(planes, 1000))
             layers.append(nn.Linear(1000, self.num_classes))
+
+        elif self.mode == 'ResNet50':
+            pass
 
         else:
             raise NotImplementedError(f'Mode {self.mode} not implemented')
