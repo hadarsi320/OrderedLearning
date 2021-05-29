@@ -259,31 +259,13 @@ def model_plots(model_save: str, device, name=None, image=None):
     if name is not None:
         print(name)
 
-    save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
-    nested_dropout = 'p' in save_dict
-
-    if os.path.basename(model_save).startswith('cae'):
-        model = ConvAutoencoder(**save_dict)
-        if nested_dropout:
-            model = NestedDropoutAutoencoder(model, **save_dict)
-        title = 'Convolutional Autoencoder'
-
-    elif os.path.basename(model_save).startswith('classifier'):
-        model = Classifier(**save_dict)
-        title = 'Classifier'
-
-    else:
-        raise NotImplementedError()
+    save_dict, model, title = utils.load_model(model_save, device)
+    apply_nested_dropout = 'p' in save_dict
 
     model.eval()
-    try:
-        model.load_state_dict(save_dict['model'])
-    except Exception as e:
-        print('Save dict mismatch\n')
-        return None
-
     print(f'The model has {utils.get_num_parameters(model)} parameters', '\n')
-    if nested_dropout:
+
+    if apply_nested_dropout:
         title = f'Nested Dropout {title}'
     if name is not None:
         title += '\n' + name

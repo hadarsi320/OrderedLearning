@@ -8,6 +8,7 @@ from torch import linalg
 from tqdm import tqdm
 
 import utils
+from models import Classifier, ConvAutoencoder, NestedDropoutAutoencoder
 
 
 def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout_p=0.2):
@@ -132,3 +133,29 @@ def get_num_parameters(model):
 @torch.no_grad()
 def get_data_representation(autoencoder, dataloader, device):
     return torch.cat([autoencoder.encode(batch.to(device)) for batch, _ in dataloader])
+
+
+def load_model(model_save, device):
+    save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
+    apply_nested_dropout = 'p' in save_dict
+
+    if os.path.basename(model_save).startswith('cae'):
+        model = ConvAutoencoder(**save_dict)
+        if apply_nested_dropout:
+            model = NestedDropoutAutoencoder(model, **save_dict)
+        title = 'Convolutional Autoencoder'
+
+    elif os.path.basename(model_save).startswith('classifier'):
+        model = Classifier(**save_dict)
+        title = 'Classifier'
+
+    else:
+        raise NotImplementedError()
+
+    try:
+        model.load_state_dict(save_dict['model'])
+    except Exception as e:
+        print('Save dict mismatch\n')
+        return None
+
+    return save_dict, model, title
