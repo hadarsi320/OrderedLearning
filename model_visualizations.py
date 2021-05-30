@@ -159,7 +159,7 @@ def fcae_reconstruction_error_plot():
         reconstruction_loss.append(np.mean(_rec_loss))
 
     pickle.dump((reconst_loss, repr_dim),
-                open(f'pickles/reconstruction_loss_{utils.current_time()}.pkl', 'wb'))
+                open(f'pickles/reconstruction_loss_{utils.get_current_time()}.pkl', 'wb'))
 
     # Plotting
     nd_reconst_loss, repr_dim = pickle.load(
@@ -282,12 +282,12 @@ def model_plots(model_save: str, device, name=None, image=None):
         print('Save dict mismatch\n')
         return None
 
-    print(f'The model has {utils.get_num_parameters(model)} parameters', '\n')
+    print(f'The model has {utils.get_num_parameters(model):,} parameters\n')
     if nested_dropout:
         title = f'Nested Dropout {title}'
     if name is not None:
         title += '\n' + name
-    # plot_filters(model, title=title)
+    plot_filters(model, title=title)
 
     if image is not None:
         conv = list(list(model.children())[-1].children())[0]
@@ -300,23 +300,25 @@ def model_plots(model_save: str, device, name=None, image=None):
 
 
 def main():
-    torch.random.manual_seed(32)
+    # torch.random.manual_seed(32)
+    #
+    # device = utils.get_device()
+    # dataloader = imagenette.get_dataloader()
+    # image = next(iter(dataloader))[0]
+    #
+    # plot_image = imagenette.unnormalize(image.squeeze(), 'Y')
+    # # plot_image = utils.image_utils.to_rgb(image.view(image.shape[1:]), 'Y').permute(1, 2, 0)
+    # plt.imshow(plot_image)
+    # plt.xticks([])
+    # plt.yticks([])
+    # plt.title('Original Image')
+    # plt.show()
 
     device = utils.get_device()
-    dataloader = imagenette.get_dataloader()
-    image = next(iter(dataloader))[0]
-
-    plot_image = imagenette.unnormalize(image.squeeze(), 'Y')
-    # plot_image = utils.image_utils.to_rgb(image.view(image.shape[1:]), 'Y').permute(1, 2, 0)
-    plt.imshow(plot_image)
-    plt.xticks([])
-    plt.yticks([])
-    plt.title('Original Image')
-    plt.show()
-
-    # for model_save in os.listdir('saves'):
-    #     if model_save.startswith('classifier-C'):
-    #         model_plots('saves/' + model_save, device, name=model_save, image=image)
+    for model_save in os.listdir('saves'):
+        if not 'NestedDropout' in model_save:
+            # model_plots('saves/' + model_save, device, name=model_save, image=image)
+            model_plots('saves/' + model_save, device, name=model_save)
 
 
 if __name__ == '__main__':
