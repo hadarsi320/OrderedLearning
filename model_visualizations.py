@@ -259,8 +259,13 @@ def model_plots(model_save: str, device, name=None, image=None):
     if name is not None:
         print(name)
 
-    save_dict, model, title = utils.load_model(model_save, device)
+    save_dict, model = utils.load_model(model_save, device)
     apply_nested_dropout = 'p' in save_dict
+
+    if os.path.basename(model_save).startswith('cae'):
+        title = 'Convolutional Autoencoder'
+    elif os.path.basename(model_save).startswith('classifier'):
+        title = 'Classifier'
 
     model.eval()
     print(f'The model has {utils.get_num_parameters(model)} parameters', '\n')
@@ -298,7 +303,7 @@ def main():
 
     device = utils.get_device()
     for model_save in os.listdir('saves'):
-        if not 'NestedDropout' in model_save:
+        if 'NestedDropout' not in model_save:
             # model_plots('saves/' + model_save, device, name=model_save, image=image)
             model_plots('saves/' + model_save, device, name=model_save)
 

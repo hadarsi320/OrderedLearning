@@ -143,11 +143,9 @@ def load_model(model_save, device):
         model = ConvAutoencoder(**save_dict)
         if apply_nested_dropout:
             model = NestedDropoutAutoencoder(model, **save_dict)
-        title = 'Convolutional Autoencoder'
 
     elif os.path.basename(model_save).startswith('classifier'):
         model = Classifier(**save_dict)
-        title = 'Classifier'
 
     else:
         raise NotImplementedError()
@@ -158,4 +156,4 @@ def load_model(model_save, device):
         print('Save dict mismatch\n')
         return None
 
-    return save_dict, model, title
+    return save_dict, model
