@@ -15,67 +15,115 @@ from models import *
 from utils import get_device, get_data_representation
 
 
-@torch.no_grad()
-def compare_code_lengths():
-    model_pickle = 'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-13__02-50-53_dict.pt'
-    torch.random.manual_seed(42)
-    num_images = 6
-    code_lengths = [16, 64, 128, 256, 1024, 'Original']
-
-    device = utils.get_device()
-    model: Autoencoder = torch.load(model_pickle, map_location=device)['autoencoder']
-    model.eval()
-
-    dataset = cifar10.get_dataloader().dataset
-
-    plt.tight_layout()
-    fig, axes = plt.subplots(ncols=num_images, nrows=len(code_lengths), squeeze=False, figsize=(12, 12))
-    indices = torch.randint(len(dataset), (num_images,))
-    for i, index in enumerate(indices):
-        original_image, _ = dataset[index]
-        encoding = model.encode(original_image.to(device))
-        for code_length, axis in zip(code_lengths, axes):
-            if code_length == 'Original':
-                image = original_image
-            else:
-                if code_length == 'Full':
-                    encoding_ = encoding
-                else:
-                    encoding_ = torch.zeros_like(encoding)
-                    encoding_[:code_length] = encoding[:code_length]
-                image = model.decode(encoding_)
-            axis[i].imshow(cifar10.unnormalize(image))
-            axis[i].set_xticks([])
-            axis[i].set_yticks([])
-            if i == 0:
-                axis[i].set_ylabel(code_length, fontsize=16)
-
-    plt.show()
-
-
-@torch.no_grad()
-def plot_repr_var(autoencoder, dataloader, scale='log', show=False, **kwargs):
-    device = kwargs.get('device', get_device())
-    autoencoder = autoencoder.to(device)
-
-    plt.clf()
-    reprs = get_data_representation(autoencoder, dataloader, device)
-    if reprs.dim() == 4:
-        plt.plot(torch.mean(torch.var(reprs, dim=[0]), dim=[1, 2]).cpu())
-    else:
-        plt.plot(torch.var(reprs, dim=0).cpu())
-    plt.yscale(scale)
-    plt.xlabel(kwargs.get('xlabel', 'Units'))
-    plt.ylabel(kwargs.get('ylabel', 'Variance'))
-
-    if 'title' in kwargs:
-        plt.title(kwargs.pop('title'))
-
-    if 'savefig' in kwargs:
-        plt.savefig(kwargs.pop('savefig'))
-
-    if show:
-        plt.show()
+# @torch.no_grad()
+# def compare_code_lengths():
+#     model_pickle = 'models/nestedDropoutAutoencoder_shallow_ReLU_21-01-13__02-50-53_dict.pt'
+#     torch.random.manual_seed(42)
+#     num_images = 6
+#     code_lengths = [16, 64, 128, 256, 1024, 'Original']
+#
+#     device = utils.get_device()
+#     model: Autoencoder = torch.load(model_pickle, map_location=device)['autoencoder']
+#     model.eval()
+#
+#     dataset = cifar10.get_dataloader().dataset
+#
+#     plt.tight_layout()
+#     fig, axes = plt.subplots(ncols=num_images, nrows=len(code_lengths), squeeze=False, figsize=(12, 12))
+#     indices = torch.randint(len(dataset), (num_images,))
+#     for i, index in enumerate(indices):
+#         original_image, _ = dataset[index]
+#         encoding = model.encode(original_image.to(device))
+#         for code_length, axis in zip(code_lengths, axes):
+#             if code_length == 'Original':
+#                 image = original_image
+#             else:
+#                 if code_length == 'Full':
+#                     encoding_ = encoding
+#                 else:
+#                     encoding_ = torch.zeros_like(encoding)
+#                     encoding_[:code_length] = encoding[:code_length]
+#                 image = model.decode(encoding_)
+#             axis[i].imshow(cifar10.unnormalize(image))
+#             axis[i].set_xticks([])
+#             axis[i].set_yticks([])
+#             if i == 0:
+#                 axis[i].set_ylabel(code_length, fontsize=16)
+#
+#     plt.show()
+#
+#
+# @torch.no_grad()
+# def plot_repr_var(autoencoder, dataloader, scale='log', show=False, **kwargs):
+#     device = kwargs.get('device', get_device())
+#     autoencoder = autoencoder.to(device)
+#
+#     plt.clf()
+#     reprs = get_data_representation(autoencoder, dataloader, device)
+#     if reprs.dim() == 4:
+#         plt.plot(torch.mean(torch.var(reprs, dim=[0]), dim=[1, 2]).cpu())
+#     else:
+#         plt.plot(torch.var(reprs, dim=0).cpu())
+#     plt.yscale(scale)
+#     plt.xlabel(kwargs.get('xlabel', 'Units'))
+#     plt.ylabel(kwargs.get('ylabel', 'Variance'))
+#
+#     if 'title' in kwargs:
+#         plt.title(kwargs.pop('title'))
+#
+#     if 'savefig' in kwargs:
+#         plt.savefig(kwargs.pop('savefig'))
+#
+#     if show:
+#         plt.show()
+#
+#
+# @torch.no_grad()
+# def fcae_reconstruction_error_plot():
+#     # Reconstructing
+#     model_pickle = f'models/nestedDropoutAutoencoder_shallow_21-01-13__10-31-45_dict.pt'
+#
+#     xticks = [1, 64, 128, 256, 512, 1024]
+#     dataloader = cifar10.get_dataloader(16)
+#     device = utils.get_device()
+#     autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'), map_location=device)['autoencoder']
+#     autoencoder.eval()
+#
+#     repr_dim = autoencoder.repr_dim
+#     indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
+#     reconst_loss = np.empty(len(indices))
+#
+#     for i, index in tqdm(enumerate(indices), total=len(indices)):
+#         losses = []
+#         for sample, _ in dataloader:
+#             sample = sample.to(device)
+#             sample_rep = autoencoder.encode(sample)
+#             cut_repr = torch.zeros_like(sample_rep)
+#             cut_repr[:, :i + 1] = sample_rep[:, :i + 1]
+#             reconst = autoencoder.decode(cut_repr)
+#             _rec_loss.append(torch.linalg.norm(sample - reconst).item())
+#         reconstruction_loss.append(np.mean(_rec_loss))
+#
+#     pickle.dump((reconst_loss, repr_dim),
+#                 open(f'pickles/reconstruction_loss_{utils.current_time()}.pkl', 'wb'))
+#
+#     # Plotting
+#     nd_reconst_loss, repr_dim = pickle.load(
+#         open('pickles/reconstruction_loss_21-01-14__13-10-00_nested_dropout.pkl', 'rb'))
+#     vanilla_reconst_loss, repr_dim = pickle.load(
+#         open('pickles/reconstruction_loss_21-01-14__13-24-42_vanilla.pkl', 'rb'))
+#     indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
+#
+#     plt.plot(indices, nd_reconst_loss, label='Nested dropout autoencoder')
+#     plt.plot(indices, vanilla_reconst_loss, label='Standard autoencoder')
+#     plt.xlabel('Representation Bytes')
+#     plt.ylabel('Reconstruction Error')
+#     plt.xticks(xticks)
+#     plt.title('Reconstruction Error by Representation Bits')
+#     plt.savefig('plots/reconstruction_error')
+#     plt.yscale('log')
+#     plt.legend()
+#     plt.show()
 
 
 @torch.no_grad()
@@ -109,7 +157,7 @@ def plot_images_by_channels(model, data_module, normalized, im_format='RGB'):
 
 
 @torch.no_grad()
-def reconstruct_images(autoencoder, dataloader, normalized):
+def reconstruct_images(autoencoder, dataloader, normalized, data_module):
     torch.random.manual_seed(52)
     num_images = 8
 
@@ -125,58 +173,10 @@ def reconstruct_images(autoencoder, dataloader, normalized):
             if i == 1:
                 image = autoencoder(image.unsqueeze(0)).squeeze()
             if normalized:
-                image = cifar10.unnormalize(image)
+                image = data_module.unnormalize(image)
             else:
                 image = image.permute(1, 2, 0)
             axis.imshow(image)
-    plt.show()
-
-
-@torch.no_grad()
-def fcae_reconstruction_error_plot():
-    # Reconstructing
-    model_pickle = f'models/nestedDropoutAutoencoder_shallow_21-01-13__10-31-45_dict.pt'
-
-    xticks = [1, 64, 128, 256, 512, 1024]
-    dataloader = cifar10.get_dataloader(16)
-    device = utils.get_device()
-    autoencoder: Autoencoder = torch.load(open(model_pickle, 'rb'), map_location=device)['autoencoder']
-    autoencoder.eval()
-
-    repr_dim = autoencoder.repr_dim
-    indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
-    reconst_loss = np.empty(len(indices))
-
-    for i, index in tqdm(enumerate(indices), total=len(indices)):
-        losses = []
-        for sample, _ in dataloader:
-            sample = sample.to(device)
-            sample_rep = autoencoder.encode(sample)
-            cut_repr = torch.zeros_like(sample_rep)
-            cut_repr[:, :i + 1] = sample_rep[:, :i + 1]
-            reconst = autoencoder.decode(cut_repr)
-            _rec_loss.append(torch.linalg.norm(sample - reconst).item())
-        reconstruction_loss.append(np.mean(_rec_loss))
-
-    pickle.dump((reconst_loss, repr_dim),
-                open(f'pickles/reconstruction_loss_{utils.get_current_time()}.pkl', 'wb'))
-
-    # Plotting
-    nd_reconst_loss, repr_dim = pickle.load(
-        open('pickles/reconstruction_loss_21-01-14__13-10-00_nested_dropout.pkl', 'rb'))
-    vanilla_reconst_loss, repr_dim = pickle.load(
-        open('pickles/reconstruction_loss_21-01-14__13-24-42_vanilla.pkl', 'rb'))
-    indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
-
-    plt.plot(indices, nd_reconst_loss, label='Nested dropout autoencoder')
-    plt.plot(indices, vanilla_reconst_loss, label='Standard autoencoder')
-    plt.xlabel('Representation Bytes')
-    plt.ylabel('Reconstruction Error')
-    plt.xticks(xticks)
-    plt.title('Reconstruction Error by Representation Bits')
-    plt.savefig('plots/reconstruction_error')
-    plt.yscale('log')
-    plt.legend()
     plt.show()
 
 
@@ -259,31 +259,13 @@ def model_plots(model_save: str, device, name=None, image=None):
     if name is not None:
         print(name)
 
-    save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
-    nested_dropout = 'p' in save_dict
-
-    if os.path.basename(model_save).startswith('cae'):
-        model = ConvAutoencoder(**save_dict)
-        if nested_dropout:
-            model = NestedDropoutAutoencoder(model, **save_dict)
-        title = 'Convolutional Autoencoder'
-
-    elif os.path.basename(model_save).startswith('classifier'):
-        model = Classifier(**save_dict)
-        title = 'Classifier'
-
-    else:
-        raise NotImplementedError()
+    save_dict, model, title = utils.load_model(model_save, device)
+    apply_nested_dropout = 'p' in save_dict
 
     model.eval()
-    try:
-        model.load_state_dict(save_dict['model'])
-    except Exception as e:
-        print('Save dict mismatch\n')
-        return None
+    print(f'The model has {utils.get_num_parameters(model)} parameters', '\n')
 
-    print(f'The model has {utils.get_num_parameters(model):,} parameters\n')
-    if nested_dropout:
+    if apply_nested_dropout:
         title = f'Nested Dropout {title}'
     if name is not None:
         title += '\n' + name
