@@ -60,9 +60,14 @@ class FCAutoencoder(Autoencoder):
 
 
 class ConvAutoencoder(Autoencoder):
-    def __init__(self, mode='A', **kwargs):
+    def __init__(self, mode='A', apply_nested_dropout=False, **kwargs):
         super(ConvAutoencoder, self).__init__()
         self.mode = mode
+        self.apply_nested_dropout = apply_nested_dropout
+
+        if self.apply_nested_dropout:
+            self._nested_dropout_layer = NestedDropout(**kwargs)
+
         self._encoder, self._decoder = self.create_cae(**kwargs)
 
     def create_cae(self, **kwargs):
@@ -133,34 +138,34 @@ class ConvAutoencoder(Autoencoder):
                               {'kernel_size': 4, 'stride': 2, 'padding': 1},
                               {'kernel_size': 4, 'stride': 2, 'padding': 1}]
 
-            encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                         activation_function, batch_norm,
-                                                                         normalized)
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                              activation_function, batch_norm,
+                                                                              normalized)
 
         elif self.mode == 'D':
             channels_list = [8]
             conv_args_list = [{'kernel_size': 8, 'stride': 8}]
 
-            encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                         activation_function, batch_norm,
-                                                                         normalized)
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                              activation_function, batch_norm,
+                                                                              normalized)
 
         elif self.mode == 'E':
             channels_list = [64]
             conv_args_list = [{'kernel_size': 8, 'stride': 8}]
 
-            encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                         activation_function, batch_norm,
-                                                                         normalized)
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                              activation_function, batch_norm,
+                                                                              normalized)
 
         elif self.mode == 'F':
             channels_list = [64, 128, 128]
             conv_args_list = [{'kernel_size': 8, 'stride': 8},
                               {'kernel_size': 2, 'stride': 2},
                               {'kernel_size': 2, 'stride': 2}]
-            encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                         activation_function, batch_norm,
-                                                                         normalized)
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                              activation_function, batch_norm,
+                                                                              normalized)
 
         elif self.mode == 'G':
             channels_list = [64, 32, 32, 32, 16, 16, 16]
@@ -172,9 +177,9 @@ class ConvAutoencoder(Autoencoder):
                               {'kernel_size': 3, 'padding': 1},
                               {'kernel_size': 3, 'padding': 1}]
 
-            encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                         activation_function, batch_norm,
-                                                                         normalized)
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                              activation_function, batch_norm,
+                                                                              normalized)
 
         elif self.mode == 'H':
             channels_list = [64, 32, 16]
@@ -183,9 +188,9 @@ class ConvAutoencoder(Autoencoder):
                               {'kernel_size': 2, 'stride': 2},
                               ]
 
-            encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                         activation_function, batch_norm,
-                                                                         normalized)
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                              activation_function, batch_norm,
+                                                                              normalized)
 
         elif self.mode == 'I':
             channels_list = [64, 128, 128, 256, 256, 512]
@@ -195,14 +200,55 @@ class ConvAutoencoder(Autoencoder):
                               {'kernel_size': 2, 'stride': 2},
                               {'kernel_size': 3, 'padding': 1},
                               {'kernel_size': 3, 'padding': 1}]
-            encoder_layers, decoder_layers = generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                         activation_function, batch_norm,
-                                                                         normalized)
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(
+                channels_list, conv_args_list, channels, activation_function, batch_norm, normalized)
 
         else:
             raise NotImplementedError(f'self.mode {self.mode} not implemented')
 
         return nn.Sequential(*encoder_layers), nn.Sequential(*decoder_layers)
+
+    def generate_autoencoder_layers(self, channels_list, conv_args_list, channels,
+                                    activation_function, batch_norm, normalized):
+        encoder_layers = []
+        decoder_layers = []
+        first = True
+        for new_channels, conv_args in zip(channels_list, conv_args_list):
+            encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
+            if batch_norm:
+                encoder_layers.append(nn.BatchNorm2d(new_channels))
+            encoder_layers.append(activation_function())
+
+            if first:
+                if self.apply_nested_dropout:
+                    encoder_layers.append(self._nested_dropout_layer)
+                first = False
+                if not normalized:
+                    # Scales our predictions to [0, 1] range
+                    decoder_layers.append(nn.Sigmoid())
+            else:
+                decoder_layers.append(activation_function())
+                if batch_norm:
+                    decoder_layers.append(nn.BatchNorm2d(channels))
+            decoder_layers.append(nn.ConvTranspose2d(new_channels, channels, **conv_args))
+
+            channels = new_channels
+        return encoder_layers, reversed(decoder_layers)
+
+    def has_converged(self):
+        if self.apply_nested_dropout:
+            return self._nested_dropout_layer.has_converged
+        return None
+
+    def get_converged_unit(self):
+        if self.apply_nested_dropout:
+            return self._nested_dropout_layer.converged_unit
+        return None
+
+    def get_dropout_dim(self):
+        if self.apply_nested_dropout:
+            return self._nested_dropout_layer.dropout_dim
+        return None
 
 
 class NestedDropoutAutoencoder(Autoencoder):
@@ -221,21 +267,23 @@ class NestedDropoutAutoencoder(Autoencoder):
 
         num_convs = sum(isinstance(layer, nn.Conv2d) for layer in encoder_layers)
         if self._dropout_depth > num_convs:
-            raise ValueError(f'Dropout depth is too large, there are only {num_convs} convolutions, while dropout '
-                             f'depth is {self._dropout_depth}')
+            raise ValueError(f'Dropout depth is too large, there are only {num_convs} convolutions,'
+                             f' while dropout depth is {self._dropout_depth}')
 
         if self._dropout_depth is not None:
             i = 0
-            for j, layer in enumerate(encoder_layers):
+            j = 0
+            for layer in enumerate(encoder_layers):
                 if isinstance(layer, nn.Conv2d):
                     i += 1
-                # if i == self._dropout_depth:
-                #     self._encoder = nn.Sequential(*encoder_layers[:j + 1])
-                #     self._decoder = nn.Sequential(*(encoder_layers[j + 1:] + decoder_layers))
-                #     i = None
-                #     break
-                if i == self._dropout_depth + 1 or j == len(encoder_layers) - 1:
-                    break
+                    # if i == self._dropout_depth:
+                    #     self._encoder = nn.Sequential(*encoder_layers[:j + 1])
+                    #     self._decoder = nn.Sequential(*(encoder_layers[j + 1:] + decoder_layers))
+                    #     i = None
+                    #     break
+                    if i == self._dropout_depth + 1 or j == len(encoder_layers) - 1:
+                        break
+                    j += 1
             self._encoder = nn.Sequential(*encoder_layers[:j])
             self._decoder = nn.Sequential(*(encoder_layers[j:] + decoder_layers))
 
@@ -255,27 +303,3 @@ class NestedDropoutAutoencoder(Autoencoder):
 
     def get_dropout_dim(self):
         return self._dropout_layer.dropout_dim
-
-
-def generate_autoencoder_layers(channels_list, conv_args_list, channels, activation_function, batch_norm, normalized):
-    encoder_layers = []
-    decoder_layers = []
-    first = True
-    for new_channels, conv_args in zip(channels_list, conv_args_list):
-        encoder_layers.append(nn.Conv2d(channels, new_channels, **conv_args))
-        if batch_norm:
-            encoder_layers.append(nn.BatchNorm2d(new_channels))
-        encoder_layers.append(activation_function())
-
-        if first:
-            first = False
-            if not normalized:
-                decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
-        else:
-            decoder_layers.append(activation_function())
-            if batch_norm:
-                decoder_layers.append(nn.BatchNorm2d(channels))
-        decoder_layers.append(nn.ConvTranspose2d(new_channels, channels, **conv_args))
-
-        channels = new_channels
-    return encoder_layers, reversed(decoder_layers)
