@@ -7,7 +7,7 @@ import torch.nn as nn
 import utils
 from models.layers import *
 
-__all__ = ['Autoencoder', 'FCAutoencoder', 'ConvAutoencoder', 'NestedDropoutAutoencoder']
+__all__ = ['Autoencoder', 'FCAutoencoder', 'ConvAutoencoder']
 
 
 class Autoencoder(ABC, nn.Module):
@@ -60,6 +60,7 @@ class FCAutoencoder(Autoencoder):
 
 
 class ConvAutoencoder(Autoencoder):
+    # TODO implement function which returns the output of the nested dropout layer
     def __init__(self, mode='A', apply_nested_dropout=False, **kwargs):
         super(ConvAutoencoder, self).__init__()
         self.mode = mode

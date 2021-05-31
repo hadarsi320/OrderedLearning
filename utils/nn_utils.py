@@ -8,7 +8,7 @@ from torch import linalg
 from tqdm import tqdm
 
 import utils
-from models import Classifier, ConvAutoencoder, NestedDropoutAutoencoder
+from models import Classifier, ConvAutoencoder
 
 
 def create_sequential(start_dim: int, end_dim: int, activation: str = None, dropout_p=0.2):
@@ -97,7 +97,7 @@ def save_model(model, optimizer, file_name, **kwargs):
     if not os.path.exists(file_dir):
         os.mkdir(file_dir)
 
-    if type(model).__name__ == 'NestedDropoutAutoencoder':
+    if model.apply_nested_dropout:
         kwargs['converged_unit'] = model.get_converged_unit()
         kwargs['has_converged'] = model.has_converged()
 
@@ -137,12 +137,9 @@ def get_data_representation(autoencoder, dataloader, device):
 
 def load_model(model_save, device):
     save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
-    apply_nested_dropout = 'p' in save_dict
 
     if os.path.basename(model_save).startswith('cae'):
         model = ConvAutoencoder(**save_dict)
-        if apply_nested_dropout:
-            model = NestedDropoutAutoencoder(model, **save_dict)
 
     elif os.path.basename(model_save).startswith('classifier'):
         model = Classifier(**save_dict)

@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 
 import utils
 from data import imagenette
-from models.autoencoders import ConvAutoencoder, NestedDropoutAutoencoder
+from models.autoencoders import ConvAutoencoder
 
 
 def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int,
@@ -128,10 +128,6 @@ def train_cae():
                         channels=channels, random_flip=random_flip, normalize_data=normalize_data,
                         plateau_limit=plateau_limit, apply_nested_dropout=apply_nested_dropout)
     model = ConvAutoencoder(**model_kwargs)
-
-    if apply_nested_dropout:
-        model_kwargs.update(dropout_depth=dropout_depth, p=p, sequence_bound=seq_bound, tol=tol)
-        model = NestedDropoutAutoencoder(model, **model_kwargs)
 
     optimizer = optim.Adam(params=model.parameters(), lr=learning_rate)
     lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=patience, verbose=True)
