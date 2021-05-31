@@ -154,6 +154,6 @@ def load_model(model_save, device):
         model.load_state_dict(save_dict['model'])
     except Exception as e:
         print('Save dict mismatch\n')
-        return None
+        return None, None
 
     return save_dict, model

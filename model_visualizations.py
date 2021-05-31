@@ -260,6 +260,8 @@ def model_plots(model_save: str, device, name=None, image=None):
         print(name)
 
     save_dict, model = utils.load_model(model_save, device)
+    if save_dict is None:
+        return None
     apply_nested_dropout = 'p' in save_dict
 
     if os.path.basename(model_save).startswith('cae'):
@@ -287,25 +289,11 @@ def model_plots(model_save: str, device, name=None, image=None):
 
 
 def main():
-    # torch.random.manual_seed(32)
-    #
-    # device = utils.get_device()
-    # dataloader = imagenette.get_dataloader()
-    # image = next(iter(dataloader))[0]
-    #
-    # plot_image = imagenette.unnormalize(image.squeeze(), 'Y')
-    # # plot_image = utils.image_utils.to_rgb(image.view(image.shape[1:]), 'Y').permute(1, 2, 0)
-    # plt.imshow(plot_image)
-    # plt.xticks([])
-    # plt.yticks([])
-    # plt.title('Original Image')
-    # plt.show()
-
     device = utils.get_device()
-    for model_save in os.listdir('saves'):
-        if 'NestedDropout' not in model_save:
-            # model_plots('saves/' + model_save, device, name=model_save, image=image)
-            model_plots('saves/' + model_save, device, name=model_save)
+    saves_dir = 'saves'
+    for model_save in os.listdir(saves_dir):
+        if 'A-Classifier' in model_save:
+            model_plots(saves_dir + '/' + model_save, device, name=model_save)
 
 
 if __name__ == '__main__':
