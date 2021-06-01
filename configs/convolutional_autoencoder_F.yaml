@@ -1,0 +1,29 @@
+data:
+  dataset: imagenette
+  kwargs:
+    normalize: True
+    batch_size: 64
+    image_mode: Y
+    random_flip: True
+model:
+  mode: F
+  activation: ReLU
+  batch_norm: False
+nested_dropout:
+  apply_nested_dropout: False
+  p: 0.1
+  sequence_bound: 256
+  tol: 1e-3
+optim:
+  optimizer: Adam
+  optimizer_kwargs:
+    lr: 1.e-3  # Learning rate
+#  lr_scheduler: StepLR
+#  lr_scheduler_kwargs:
+#    step_size: 1
+#    gamma: 0.98
+#    verbose: True
+train:
+  loss_criterion: MSELoss
+  epochs: 1
+  plateau_limit: None
