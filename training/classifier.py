@@ -6,6 +6,8 @@ from data import imagenette
 from models.classifiers import Classifier
 
 
+# TODO update this module to work with configuration yaml files
+# TODO stop using general_train module
 def train_classifier():
     # data options
     normalize_data = True

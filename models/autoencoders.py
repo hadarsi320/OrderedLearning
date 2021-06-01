@@ -70,11 +70,24 @@ class ConvAutoencoder(Autoencoder):
         self.apply_nested_dropout = apply_nested_dropout
         self._encoder, self._decoder = self.create_cae(**kwargs)
 
-    def create_cae(self, **kwargs):
-        activation_function = getattr(nn, kwargs.get('activation', 'ReLU'))
-        normalized = kwargs.get('normalize_data', True)
-        batch_norm = kwargs.get('batch_norm', True)
-        channels = kwargs.get('channels', 3)
+    def create_cae(self, image_mode, activation, normalize=True, batch_norm=False, **kwargs):
+        """
+
+        Parameters
+        ----------
+        image_mode - The format of the images the model receives [RGB/YCbCr/Y/...]
+        activation - The activation function [ReLU/Tanh/...]
+        normalize - Whether the images are normalized or not
+        batch_norm - Whether batch norm should be applied
+        kwargs - Catches unused key word arguments
+
+        Returns
+        -------
+        Encoder and Decoder layers
+        """
+        activation_function = getattr(nn, activation)
+        batch_norm = batch_norm
+        channels = 1 if image_mode == 'Y' else 3
 
         encoder_layers = []
         decoder_layers = []
@@ -92,7 +105,7 @@ class ConvAutoencoder(Autoencoder):
 
                 if first:
                     first = False
-                    if not normalized:
+                    if not normalize:
                         decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
                 else:
                     if batch_norm:
@@ -120,7 +133,7 @@ class ConvAutoencoder(Autoencoder):
 
                 if first:
                     first = False
-                    if not normalized:
+                    if not normalize:
                         decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
                 else:
                     if batch_norm:
@@ -140,7 +153,7 @@ class ConvAutoencoder(Autoencoder):
 
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
-                                                                              normalized)
+                                                                              normalize)
 
         elif self.mode == 'D':
             channels_list = [8]
@@ -148,7 +161,7 @@ class ConvAutoencoder(Autoencoder):
 
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
-                                                                              normalized)
+                                                                              normalize)
 
         elif self.mode == 'E':
             channels_list = [64]
@@ -156,7 +169,7 @@ class ConvAutoencoder(Autoencoder):
 
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
-                                                                              normalized)
+                                                                              normalize)
 
         elif self.mode == 'F':
             channels_list = [64, 128, 128]
@@ -165,7 +178,7 @@ class ConvAutoencoder(Autoencoder):
                               {'kernel_size': 2, 'stride': 2}]
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
-                                                                              normalized)
+                                                                              normalize)
 
         elif self.mode == 'G':
             channels_list = [64, 32, 32, 32, 16, 16, 16]
@@ -179,7 +192,7 @@ class ConvAutoencoder(Autoencoder):
 
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
-                                                                              normalized)
+                                                                              normalize)
 
         elif self.mode == 'H':
             channels_list = [64, 32, 16]
@@ -190,7 +203,7 @@ class ConvAutoencoder(Autoencoder):
 
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
-                                                                              normalized)
+                                                                              normalize)
 
         elif self.mode == 'I':
             channels_list = [64, 128, 128, 256, 256, 512]
@@ -201,7 +214,7 @@ class ConvAutoencoder(Autoencoder):
                               {'kernel_size': 3, 'padding': 1},
                               {'kernel_size': 3, 'padding': 1}]
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(
-                channels_list, conv_args_list, channels, activation_function, batch_norm, normalized)
+                channels_list, conv_args_list, channels, activation_function, batch_norm, normalize)
 
         else:
             raise NotImplementedError(f'self.mode {self.mode} not implemented')

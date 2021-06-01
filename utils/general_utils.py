@@ -2,21 +2,7 @@ import time
 from datetime import datetime
 
 import torch
-import matplotlib.pyplot as plt
-
-from utils import to_rgb
-
-
-def restore_image(image, mean, std, im_format='RGB') -> torch.tensor:
-    std = torch.tensor(std).unsqueeze(-1).unsqueeze(-1)
-    mean = torch.tensor(mean).unsqueeze(-1).unsqueeze(-1)
-    restored_image = std * image + mean
-    return to_rgb(restored_image, im_format).permute(1, 2, 0)
-
-
-def plot_image(image):
-    plt.imshow(image.permute(1, 2, 0))
-    plt.show()
+import yaml
 
 
 def binarize_data(data: torch.Tensor, bin_quantile=0.5):
@@ -45,8 +31,9 @@ def format_number(number, precision=3):
     if number == 0:
         return number
 
-    if round(number, ndigits=precision) != 0:
-        return round(number, ndigits=precision)
+    round_number = round(float(number), ndigits=precision)
+    if round_number != 0:
+        return round_number
 
     return f'{number:.{precision}e}'
 
@@ -55,16 +42,9 @@ def format_time(seconds):
     return time.strftime('%H:%M:%S', time.gmtime(seconds))
 
 
-def plot_subfigures(images, cmap=None, title=None, figsize_scale=1):
-    output_shape = images.shape[:2]
-    fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[1] * figsize_scale,
-                                                         output_shape[0] * figsize_scale))
-    for i, (image_row, axes) in enumerate(zip(images, axes_mat)):
-        for j, (image, axis) in enumerate(zip(image_row, axes)):
-            axis.set_xticks([])
-            axis.set_yticks([])
-            axis.imshow(image, cmap=cmap)
-    if title is not None:
-        fig.suptitle(title)
-    plt.tight_layout()
-    plt.show()
+def load_yaml(path) -> dict:
+    return yaml.load(open(path), yaml.Loader)
+
+
+def dump_yaml(data, path):
+    yaml.dump(data, open(path, 'w'), sort_keys=False)

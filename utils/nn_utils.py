@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch import linalg
 from tqdm import tqdm
+import yaml
 
 import utils
 from models import Classifier, ConvAutoencoder
@@ -92,32 +93,31 @@ def get_model_accuracy(model, dataloader, device=utils.get_device()):
     return np.average(correct)
 
 
-def save_model(model, optimizer, file_name, **kwargs):
+def save_model(model, optimizer, file_name, config):
     file_dir = os.path.dirname(file_name)
     if not os.path.exists(file_dir):
         os.mkdir(file_dir)
 
     if model.apply_nested_dropout:
-        kwargs['converged_unit'] = model.get_converged_unit()
-        kwargs['has_converged'] = model.has_converged()
+        config['performance'].update(converged_unit=model.get_converged_unit(),
+                                     has_converged=model.has_converged())
 
-    save_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict(), **kwargs}
-    torch.save(save_dict, f'{file_name}.pt')
-
-    with open(f'{file_name}.txt', 'w') as f:
-        for key in kwargs:
-            f.write(f'{key}: {kwargs[key]}\n')
+    torch.save(dict(model=model.state_dict(), optimizer=optimizer.state_dict()),
+               f'{file_name}.pt')
+    utils.dump_yaml(config, f'{file_name}.yaml')
 
 
 def update_save(file_name, **kwargs):
-    save_dict: dict = torch.load(f'{file_name}.pt')
-    save_dict.update(kwargs)
-    torch.save(save_dict, f'{file_name}.pt')
-
-    with open(f'{file_name}.txt', 'w') as f:
-        for key in save_dict:
-            if key not in ['model', 'optimizer']:
-                f.write(f'{key}: {save_dict[key]}\n')
+    if os.path.exists(f'{file_name}.yaml'):
+        config = utils.load_yaml(f'{file_name}.yaml')
+        config.update(kwargs)
+        utils.dump_yaml(config, f'{file_name}.yaml')
+    elif os.path.exists(f'{file_name}.txt'):
+        with open(f'{file_name}.txt', 'a') as f:
+            for key, value in kwargs.items():
+                f.write(f'{key}: {value}\n')
+    else:
+        raise ValueError('No model file')
 
 
 def fit_dim(tensor: torch.Tensor, target: torch.Tensor):
@@ -138,18 +138,27 @@ def get_data_representation(autoencoder, dataloader, device):
 def load_model(model_save, device):
     save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
 
-    if os.path.basename(model_save).startswith('cae'):
-        model = ConvAutoencoder(**save_dict)
+    dir_name = os.path.basename(model_save)
+    if os.path.exists(f'{model_save}/model.yaml'):
+        cfg = utils.load_yaml(f'{model_save}/model.yaml')
+        # TODO implement support for classifier
+        if dir_name.startswith('cae'):
+            model = ConvAutoencoder(**cfg['model'], **cfg['nested_dropout'], **cfg['data']['kwargs'])
+        else:
+            raise NotImplementedError()
 
-    elif os.path.basename(model_save).startswith('classifier'):
-        model = Classifier(**save_dict)
-
+    # past compatibility
     else:
-        raise NotImplementedError()
+        if dir_name.startswith('cae'):
+            model = ConvAutoencoder(**save_dict)
+        elif dir_name.startswith('classifier'):
+            model = Classifier(**save_dict)
+        else:
+            raise NotImplementedError()
 
     try:
         model.load_state_dict(save_dict['model'])
-    except Exception as e:
+    except RuntimeError as e:
         print('Save dict mismatch\n')
         return None, None
 
