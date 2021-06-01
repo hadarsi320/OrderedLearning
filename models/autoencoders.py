@@ -63,12 +63,11 @@ class ConvAutoencoder(Autoencoder):
     # TODO implement function which returns the output of the nested dropout layer
     def __init__(self, mode='A', apply_nested_dropout=False, **kwargs):
         super(ConvAutoencoder, self).__init__()
-        self.mode = mode
-        self.apply_nested_dropout = apply_nested_dropout
-
-        if self.apply_nested_dropout:
+        if apply_nested_dropout:
             self._nested_dropout_layer = NestedDropout(**kwargs)
 
+        self.mode = mode
+        self.apply_nested_dropout = apply_nested_dropout
         self._encoder, self._decoder = self.create_cae(**kwargs)
 
     def create_cae(self, **kwargs):
