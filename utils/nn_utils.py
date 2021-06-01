@@ -136,19 +136,18 @@ def get_data_representation(autoencoder, dataloader, device):
 
 
 def load_model(model_save, device):
-    save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
-
     dir_name = os.path.basename(model_save)
     if os.path.exists(f'{model_save}/model.yaml'):
-        cfg = utils.load_yaml(f'{model_save}/model.yaml')
+        save_dict = utils.load_yaml(f'{model_save}/model.yaml')
         # TODO implement support for classifier
         if dir_name.startswith('cae'):
-            model = ConvAutoencoder(**cfg['model'], **cfg['nested_dropout'], **cfg['data']['kwargs'])
+            model = ConvAutoencoder(**save_dict['model'], **save_dict['nested_dropout'], **save_dict['data']['kwargs'])
         else:
             raise NotImplementedError()
 
     # past compatibility
     else:
+        save_dict = torch.load(f'{model_save}/model.pt', map_location=device)
         if dir_name.startswith('cae'):
             model = ConvAutoencoder(**save_dict)
         elif dir_name.startswith('classifier'):
@@ -157,7 +156,8 @@ def load_model(model_save, device):
             raise NotImplementedError()
 
     try:
-        model.load_state_dict(save_dict['model'])
+        states = torch.load(f'{model_save}/model.pt', map_location=device)
+        model.load_state_dict(states['model'])
     except RuntimeError as e:
         print('Save dict mismatch\n')
         return None, None
