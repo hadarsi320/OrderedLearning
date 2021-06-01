@@ -2,3 +2,6 @@
 /testing.py
 trained_models/
 pickles/
+/datasets/imagenette2-320/
+/saves/
+/.idea/*
