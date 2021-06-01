@@ -11,10 +11,10 @@ from models.autoencoders import ConvAutoencoder
 
 
 def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int,
-          loss_criterion: str, model_dir: str, plateau_limit: int, apply_nested_dropout: bool,
-          **kwargs):
+          loss_criterion: str, model_dir: str, apply_nested_dropout: bool, **kwargs):
     print(f'The model has {utils.get_num_parameters(model):,} parameters')
     lr_scheduler = kwargs.pop('lr_scheduler', None)
+    plateau_limit = kwargs.pop('plateau_limit', None)
 
     loss_function = getattr(nn, loss_criterion)()
     batch_print = len(dataloader) // 5
@@ -61,7 +61,7 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
         train_time += epoch_time
 
         print(f'\tEpoch loss {epoch_loss}')
-        print(f'\tEpoch time {utils.format_time(epoch_time)}\n')
+        print(f'\tEpoch time {utils.format_time(epoch_time)}')
 
         model_save_kwargs = dict(**kwargs, epoch=epoch, train_time=utils.format_time(train_time), losses=losses)
         has_improved = False
@@ -71,16 +71,19 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
             model_save_kwargs.update(best_loss=best_loss)
 
         if lr_scheduler is not None:
-            lr_scheduler.step(best_loss)
+            # lr_scheduler.step(best_loss)
+            lr_scheduler.step()
 
+        utils.save_model(model, optimizer, f'{model_dir}/model', **model_save_kwargs)
         if has_improved:
-            utils.save_model(model, optimizer, f'{model_dir}/model', **model_save_kwargs)
+            utils.save_model(model, optimizer, f'{model_dir}/best_model', **model_save_kwargs)
             plateau = 0
         else:
             plateau += 1
 
         if (plateau == plateau_limit) or (apply_nested_dropout is True and model.has_converged()):
             break
+        print()
 
     if apply_nested_dropout is True and model.has_converged():
         end = 'nested dropout has converged'
@@ -96,44 +99,54 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
 
 def train_cae():
     # data options
-    normalize_data = True
     dataset = 'imagenette'
+    normalize_data = True
     image_mode = 'Y'
     channels = 1 if image_mode == 'Y' else 3
-    random_flip = False
+    random_flip = True
+
+    # model options
+    mode = 'F'
+    activation = 'ReLU'
+    batch_norm = False
 
     # optimization options
     loss_criterion = 'MSELoss'
     epochs = 50
-    learning_rate = 1e-2
-    batch_size = 16
-    patience = 5
+    learning_rate = 1e-3
+    batch_size = 64
+    patience = None
+    step_size = None
+    gamma = 0.98
     plateau_limit = None
-
-    # model options
-    cae_mode = 'H'
-    activation = 'ReLU'
-    batch_norm = False
 
     # nested dropout options
     apply_nested_dropout = False
-    dropout_depth = 1
     p = 0.1
     seq_bound = 2 ** 8
     tol = 1e-3
 
     dataloader = imagenette.get_dataloader(batch_size, normalize=normalize_data, image_mode=image_mode)
-    model_kwargs = dict(mode=cae_mode, activation=activation, loss_criterion=loss_criterion, patience=patience,
-                        learning_rate=learning_rate, batch_norm=batch_norm, dataset=dataset, image_mode=image_mode,
-                        channels=channels, random_flip=random_flip, normalize_data=normalize_data,
-                        plateau_limit=plateau_limit, apply_nested_dropout=apply_nested_dropout)
+    model_kwargs = dict(mode=mode, activation=activation, batch_norm=batch_norm,
+
+                        dataset=dataset, normalize_data=normalize_data, image_mode=image_mode,
+                        channels=channels, random_flip=random_flip,
+
+                        loss_criterion=loss_criterion, learning_rate=learning_rate, batch_size=batch_size,
+                        patience=patience, step_size=step_size, gamma=gamma, plateau_limit=plateau_limit,
+
+                        apply_nested_dropout=apply_nested_dropout)
+    if apply_nested_dropout:
+        model_kwargs.update(p=p, seq_bound=seq_bound, tol=tol)
     model = ConvAutoencoder(**model_kwargs)
 
     optimizer = optim.Adam(params=model.parameters(), lr=learning_rate)
-    lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=patience, verbose=True)
+    # lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=patience, verbose=True)
+    # lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size)
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma, verbose=True)
 
     current_time = utils.get_current_time()
-    model_name = f'cae-{cae_mode}-{type(model).__name__}_{current_time}'
+    model_name = f'cae-{mode}-{type(model).__name__}_{current_time}'
     model_dir = f'{utils.save_dir}/{model_name}'
 
     train(model, optimizer, dataloader, lr_scheduler=lr_scheduler, model_dir=model_dir,
