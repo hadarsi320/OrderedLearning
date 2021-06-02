@@ -3,10 +3,8 @@ from math import log2, ceil, floor
 
 import numpy as np
 import torch
-import torch.nn as nn
-from torch import linalg
+from torch import linalg, nn, optim
 from tqdm import tqdm
-import yaml
 
 import utils
 from models import Classifier, ConvAutoencoder
@@ -163,3 +161,7 @@ def load_model(model_save, device):
         return None, None
 
     return save_dict, model
+
+
+def get_learning_rate(optimizer: optim.Optimizer):
+    return optimizer.param_groups[0]['lr']
