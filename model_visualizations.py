@@ -1,6 +1,5 @@
 import math
 import os
-import pickle
 
 import numpy as np
 import torch
@@ -10,9 +9,6 @@ from tqdm import tqdm
 
 import utils
 import utils.image_utils
-from data import imagenette
-from models import *
-from utils import get_device, get_data_representation
 
 
 # @torch.no_grad()
@@ -224,8 +220,8 @@ def plot_cae_reconstruction_error(nd_autoencoder, dataloader):
 
 
 @torch.no_grad()
-def plot_filters(model, title=None, output_shape=None, cmap='Greys'):
-    filter_matrix = model.get_weights(1)[0].numpy()
+def plot_filters(model, title=None, output_shape=None, cmap='Greys', show=True):
+    filter_matrix = model.get_weights(1)[0].cpu().numpy()
     shape = filter_matrix.shape
     channels = shape[1]
 
@@ -235,7 +231,7 @@ def plot_filters(model, title=None, output_shape=None, cmap='Greys'):
         assert output_shape[1] % channels == 0
         assert shape[0] * shape[1] == output_shape[0] * output_shape[1]
     filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
-    utils.plot_subfigures(filter_matrix, cmap=cmap, title=title)
+    utils.plot_subfigures(filter_matrix, cmap=cmap, title=title, show=show)
 
 
 @torch.no_grad()
@@ -262,7 +258,11 @@ def model_plots(model_save: str, device, name=None, image=None):
     save_dict, model = utils.load_model(model_save, device)
     if save_dict is None:
         return None
-    apply_nested_dropout = 'p' in save_dict
+
+    if 'p' in save_dict or ('nested_dropout' in save_dict and save_dict['nested_dropout']['apply_nested_dropout']):
+        apply_nested_dropout = True
+    else:
+        apply_nested_dropout = False
 
     if os.path.basename(model_save).startswith('cae'):
         title = 'Convolutional Autoencoder'
@@ -291,8 +291,8 @@ def model_plots(model_save: str, device, name=None, image=None):
 def main():
     device = utils.get_device()
     saves_dir = 'saves'
-    for model_save in os.listdir(saves_dir):
-        if 'A-Classifier' in model_save:
+    for model_save in sorted(os.listdir(saves_dir)):
+        if 'F-Conv' in model_save:
             model_plots(saves_dir + '/' + model_save, device, name=model_save)
 
 
