@@ -1,18 +1,22 @@
 import time
 
 import numpy as np
+from clearml import Task
+from clearml.logger import Logger
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
-import utils
 import data
+import model_visualizations
+import utils
 from models.autoencoders import ConvAutoencoder
 
 
-def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int,
+def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int,
           loss_criterion: str, model_dir: str, apply_nested_dropout: bool, plateau_limit: int, config: dict,
-          lr_scheduler=None):
+          lr_scheduler=None, logger: Logger = None):
     print(f'The model has {utils.get_num_parameters(model):,} parameters')
     loss_function = getattr(nn, loss_criterion)()
     batch_print = len(dataloader) // 5
@@ -60,6 +64,7 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
 
         print(f'\tEpoch loss {epoch_loss}')
         print(f'\tEpoch time {utils.format_time(epoch_time)}')
+        print()
 
         model_save_dict = config.copy()
         model_save_dict['performance'] = dict(epoch=epoch, train_time=utils.format_time(train_time), losses=losses)
@@ -69,9 +74,15 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
             has_improved = True
             model_save_dict['performance']['best_loss'] = best_loss
 
+        if apply_nested_dropout:
+            model_save_dict['performance']['converged_unit'] = model.get_converged_unit()
+            model_save_dict['performance']['dropout_dim'] = model.get_dropout_dim()
+
         if lr_scheduler is not None:
-            # lr_scheduler.step(best_loss)
-            lr_scheduler.step()
+            if type(lr_scheduler) == optim.lr_scheduler.ReduceLROnPlateau:
+                lr_scheduler.step(epoch_loss)
+            else:
+                lr_scheduler.step()
 
         utils.save_model(model, optimizer, f'{model_dir}/model', model_save_dict)
         if has_improved:
@@ -80,23 +91,41 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
         else:
             plateau += 1
 
+        if logger is not None:
+            iteration = epoch + 1
+            logger.report_scalar('Model Loss', 'Train Loss', epoch_loss, iteration=iteration)
+            model_visualizations.plot_filters(model, output_shape=(8, 8), show=False)
+            logger.report_matplotlib_figure('Model Filters', 'Filters', figure=plt, iteration=iteration,
+                                            report_image=True)
+            plt.close()
+            if lr_scheduler is not None:
+                logger.report_scalar('Learning Rate', 'Current', utils.get_learning_rate(optimizer),
+                                     iteration=iteration)
+                logger.report_scalar('Learning Rate', 'Initial', optimizer.defaults['lr'],
+                                     iteration=iteration)
+            if apply_nested_dropout:
+                logger.report_scalar('Nested Dropout', 'Converged Unit',
+                                     model.get_converged_unit(), iteration=iteration)
+                logger.report_scalar('Nested Dropout', 'Dropout Dimension',
+                                     model.get_dropout_dim(), iteration=iteration)
+
         if (plateau == plateau_limit) or (apply_nested_dropout is True and model.has_converged()):
             break
-        print()
 
     if apply_nested_dropout is True and model.has_converged():
-        end = 'nested dropout has converged'
-        print('Nested dropout has converged!')
+        end = 'Nested dropout has converged'
     elif plateau == plateau_limit:
-        end = 'has plateaued'
-        print('The model has plateaued')
+        end = 'The model has plateaued'
     else:
-        end = f'reached max number of epochs ({epochs})'
-        print('The maximum number of epochs has been reached')
+        end = f'Reached max number of epochs ({epochs})'
+    print(end)
     utils.update_save(f'{model_dir}/model', end=end)
 
 
 def train_cae(cfg):
+    task = Task.init(project_name="Ordered Learning")
+    task.connect(cfg)
+
     data_module = getattr(data, cfg['data']['dataset'])
     optimizer_model = getattr(optim, cfg['optim']['optimizer'])
 
@@ -114,5 +143,8 @@ def train_cae(cfg):
     model_name = f'cae-{cfg["model"]["mode"]}-{type(model).__name__}_{current_time}'
     model_dir = f'{utils.save_dir}/{model_name}'
 
+    task.set_name(model_name)
+    logger = task.get_logger()
     train(model, optimizer, dataloader, lr_scheduler=lr_scheduler, model_dir=model_dir,
-          apply_nested_dropout=cfg['nested_dropout']['apply_nested_dropout'], config=cfg, **cfg['train'])
+          apply_nested_dropout=cfg['nested_dropout']['apply_nested_dropout'], config=cfg, **cfg['train'],
+          logger=logger)
