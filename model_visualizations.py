@@ -9,6 +9,8 @@ from tqdm import tqdm
 
 import utils
 import utils.image_utils
+from data import imagenette
+from models import ConvAutoencoder
 
 
 # @torch.no_grad()
@@ -123,25 +125,27 @@ import utils.image_utils
 
 
 @torch.no_grad()
-def plot_images_by_channels(model, data_module, normalized, im_format='RGB'):
+def plot_images_by_channels(model: ConvAutoencoder, data_module, normalized, im_format='RGB'):
     torch.random.manual_seed(42)
     num_channels = [1, 2, 4, 8, 16, 32, 64, 'Original']
     num_images = len(num_channels)
 
-    images, _ = next(iter(data_module.get_dataloader(num_images, normalize=normalized)))
+    images, _ = next(iter(data_module.get_dataloader(batch_size=num_images, normalize=normalized)))
 
     plt.tight_layout()
     fig, axes_mat = plt.subplots(ncols=num_images, nrows=len(num_channels), squeeze=False,
                                  figsize=(num_images * 2, num_images * 2))
     for i, (original_image, axes) in enumerate(zip(images, axes_mat.transpose())):
-        encoding = model.encode(original_image).squeeze()
+        # encoding = model.encode(original_image).squeeze()
+        encoding = model.get_feature_map(original_image, 1).squeeze()
         for n, axis in zip(num_channels, axes):
             if n == 'Original':
                 image = original_image
             else:
                 encoding_ = torch.zeros_like(encoding)
                 encoding_[:n] = encoding[:n]
-                image = model.decode(encoding_).squeeze()
+                # image = model.decode(encoding_).squeeze()
+                image = model.forward_feature_map(encoding_, 1).squeeze()
 
             image = data_module.unnormalize(image, im_format)
             axis.imshow(image)
@@ -177,7 +181,7 @@ def reconstruct_images(autoencoder, dataloader, normalized, data_module):
 
 
 @torch.no_grad()
-def get_reconstruction_error(autoencoder, dataloader, dim, device, subset=200):
+def get_reconstruction_error(autoencoder: ConvAutoencoder, dataloader, dim, device, subset=1000):
     loss_func = nn.MSELoss()
 
     losses = [[] for _ in range(dim)]
@@ -186,11 +190,13 @@ def get_reconstruction_error(autoencoder, dataloader, dim, device, subset=200):
             break
 
         sample = sample.to(device)
-        encoding = autoencoder.encode(sample)
+        # encoding = autoencoder.encode(sample)
+        encoding = autoencoder.get_feature_map(sample, 1)
         for j in range(dim):
             cut_repr = torch.clone(encoding)
             cut_repr[:, j + 1:] = 0
-            reconstruction = autoencoder.decode(cut_repr)
+            # reconstruction = autoencoder.decode(cut_repr)
+            reconstruction = autoencoder.forward_feature_map(cut_repr, 1)
             losses[j].append(loss_func(reconstruction, sample).item())
     results = np.average(losses, axis=1)
     return results
@@ -282,18 +288,51 @@ def model_plots(model_save: str, device, name=None, image=None):
         conv = list(list(model.children())[-1].children())[0]
         plot_feature_maps(conv, image)
 
-    # if nested_dropout:
+    # if apply_nested_dropout:
     #     plot_images_by_channels(model, imagenette, True, 'Y')
     #     dataloader = imagenette.get_dataloader(normalize=True, image_mode='Y')
     #     plot_cae_reconstruction_error(model, dataloader)
 
 
+def compare_models(vanilla_dir, dropout_dir, device):
+    _, vanilla_model = utils.load_model(vanilla_dir, device)
+    _, dropout_model = utils.load_model(dropout_dir, device)
+    plot_images_by_channels(vanilla_model, imagenette, True, 'Y')
+    plot_images_by_channels(dropout_model, imagenette, True, 'Y')
+
+    dataloader = imagenette.get_dataloader(normalize=True, image_mode='Y')
+
+    repr_dim = 64
+    vanilla_model.to(device)
+    vanilla_losses = get_reconstruction_error(vanilla_model, dataloader, repr_dim, device)
+    dropout_model.to(device)
+    dropout_losses = get_reconstruction_error(dropout_model, dataloader, repr_dim, device)
+    # Plotting
+    indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
+
+    for i in range(2):
+        plt.plot(range(1, repr_dim + 1), vanilla_losses, label='Vanilla Model')
+        plt.plot(range(1, repr_dim + 1), dropout_losses, label='Nested Dropout Model')
+        plt.xlabel('Representation Channels')
+        plt.ylabel('Reconstruction Error')
+        plt.xticks(indices)
+        plt.title('Error by Channels')
+        if i == 0:
+            plt.yscale('log')
+        plt.tight_layout()
+        plt.legend()
+        plt.show()
+
+
 def main():
     device = utils.get_device()
     saves_dir = 'saves'
-    for model_save in sorted(os.listdir(saves_dir)):
-        if 'F-Conv' in model_save:
-            model_plots(saves_dir + '/' + model_save, device, name=model_save)
+    compare_models(f'{saves_dir}/cae-F-ConvAutoencoder_21-06-01--10-43-39',
+                   f'{saves_dir}/cae-F-ConvAutoencoder_21-06-03--08-16-48',
+                   device)
+    # for model_save in sorted(os.listdir(saves_dir)):
+    #     if 'F-Conv' in model_save:
+    #         model_plots(saves_dir + '/' + model_save, device, name=model_save)
 
 
 if __name__ == '__main__':
