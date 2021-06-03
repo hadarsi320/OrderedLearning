@@ -61,14 +61,14 @@ class FCAutoencoder(Autoencoder):
 
 class ConvAutoencoder(Autoencoder):
     # TODO implement function which returns the output of the nested dropout layer
-    def __init__(self, mode='A', apply_nested_dropout=False, **kwargs):
+    def __init__(self, mode='A', apply_nested_dropout=False, activation='ReLU', image_mode='RGB', **kwargs):
         super(ConvAutoencoder, self).__init__()
         if apply_nested_dropout:
             self._nested_dropout_layer = NestedDropout(**kwargs)
 
         self.mode = mode
         self.apply_nested_dropout = apply_nested_dropout
-        self._encoder, self._decoder = self.create_cae(**kwargs)
+        self._encoder, self._decoder = self.create_cae(image_mode, activation, **kwargs)
 
     def create_cae(self, image_mode, activation, normalize=True, batch_norm=False, **kwargs):
         """
@@ -262,3 +262,33 @@ class ConvAutoencoder(Autoencoder):
         if self.apply_nested_dropout:
             return self._nested_dropout_layer.dropout_dim
         return None
+
+    def get_feature_map(self, x: torch.Tensor, depth):
+        out = x
+        if out.dim() == 3:
+            out = out.unsqueeze(0)
+
+        i = 0
+        for module in itertools.chain(self._encoder.children(), self._decoder.children()):
+            out = module(out)
+            if isinstance(module, nn.Conv2d):
+                i += 1
+                if i == depth:
+                    break
+        return out
+
+    def forward_feature_map(self, feature_map: torch.Tensor, depth):
+        out = feature_map
+        if out.dim() == 3:
+            out = out.unsqueeze(0)
+
+        i = 0
+        forward = False
+        for module in itertools.chain(self._encoder.children(), self._decoder.children()):
+            if forward:
+                out = module(out)
+            elif isinstance(module, nn.Conv2d):
+                i += 1
+                if i == depth:
+                    forward = True
+        return out
