@@ -1,12 +1,13 @@
 import time
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 from clearml import Task
 from clearml.logger import Logger
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 
 import data
 import model_visualizations
@@ -51,10 +52,10 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                 batch_loss = utils.format_number(np.average(batch_losses[-batch_print:]))
                 print(f'Batch {i + 1} loss: {batch_loss}')
 
-            if apply_nested_dropout:
+            if apply_nested_dropout and not model.has_converged():
                 model(X)
-                if model.has_converged():
-                    break
+                # if model.has_converged():
+                #     break
 
         epoch_loss = utils.format_number(np.average(batch_losses))
         losses.append(epoch_loss)
@@ -63,8 +64,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         train_time += epoch_time
 
         print(f'\tEpoch loss {epoch_loss}')
-        print(f'\tEpoch time {utils.format_time(epoch_time)}')
-        print()
+        print(f'\tEpoch time {utils.format_time(epoch_time)}\n')
 
         model_save_dict = config.copy()
         model_save_dict['performance'] = dict(epoch=epoch, train_time=utils.format_time(train_time), losses=losses)
@@ -78,6 +78,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             model_save_dict['performance']['converged_unit'] = model.get_converged_unit()
             model_save_dict['performance']['dropout_dim'] = model.get_dropout_dim()
 
+        # if lr_scheduler is not None and (model.apply_nested_dropout and model.has_converged()):
         if lr_scheduler is not None:
             if type(lr_scheduler) == optim.lr_scheduler.ReduceLROnPlateau:
                 lr_scheduler.step(epoch_loss)
@@ -109,10 +110,10 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                 logger.report_scalar('Nested Dropout', 'Dropout Dimension',
                                      model.get_dropout_dim(), iteration=iteration)
 
-        if (plateau == plateau_limit) or (apply_nested_dropout is True and model.has_converged()):
-            break
+        # if (plateau == plateau_limit) or (apply_nested_dropout is True and model.has_converged()):
+        #     break
 
-    if apply_nested_dropout is True and model.has_converged():
+    if False:  # apply_nested_dropout is True and model.has_converged():
         end = 'Nested dropout has converged'
     elif plateau == plateau_limit:
         end = 'The model has plateaued'
@@ -123,8 +124,11 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
 
 
 def train_cae(cfg):
+    matplotlib.use('agg')
+    apply_nested_dropout = cfg['nested_dropout']['apply_nested_dropout']
+
     task = Task.init(project_name="Ordered Learning")
-    task.connect(cfg)
+    task.connect_configuration(cfg, name='Model Configuration')
 
     data_module = getattr(data, cfg['data']['dataset'])
     optimizer_model = getattr(optim, cfg['optim']['optimizer'])
@@ -143,8 +147,10 @@ def train_cae(cfg):
     model_name = f'cae-{cfg["model"]["mode"]}-{type(model).__name__}_{current_time}'
     model_dir = f'{utils.save_dir}/{model_name}'
 
+    if apply_nested_dropout:
+        model_name += ' - Nested Dropout'
     task.set_name(model_name)
     logger = task.get_logger()
     train(model, optimizer, dataloader, lr_scheduler=lr_scheduler, model_dir=model_dir,
-          apply_nested_dropout=cfg['nested_dropout']['apply_nested_dropout'], config=cfg, **cfg['train'],
+          apply_nested_dropout=apply_nested_dropout, config=cfg, **cfg['train'],
           logger=logger)
