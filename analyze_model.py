@@ -10,7 +10,7 @@ from data import cifar10
 
 def main():
     device = utils.get_device()
-    dataloader = cifar10.get_dataloader(1000)
+    dataloader = cifar10.get_dataloader(batch_size=1000)
 
     losses_dict = {}
     for file in os.listdir('models/'):

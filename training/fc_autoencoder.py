@@ -229,7 +229,7 @@ def test_params(batch_size, learning_rate, eps, bound, deep, repr_dim, epochs, n
     model_params = locals()
     deep_str = 'deep' if deep else 'shallow'
 
-    dataloader = cifar10.get_dataloader(batch_size)
+    dataloader = cifar10.get_dataloader(batch_size=batch_size)
     autoencoder = FCAutoencoder(3072, repr_dim, deep=deep, activation=activation)
 
     if nested_dropout:

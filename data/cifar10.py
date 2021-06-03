@@ -7,13 +7,13 @@ import utils
 from data import CIFAR10_MEAN, CIFAR10_STD
 
 
-def get_dataloader(batch_size=1, download=False, normalize=True):
+def get_dataloader(train=True, batch_size=1, download=False, normalize=True):
     transform_list = [transforms.ToTensor()]
     if normalize:
         transform_list.append(transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD))
 
     transform = transforms.Compose(transform_list)
-    dataset = torchvision.datasets.CIFAR10(root=utils.datasets_dir, download=download, transform=transform, train=True)
+    dataset = torchvision.datasets.CIFAR10(root=utils.datasets_dir, download=download, transform=transform, train=train)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     return dataloader
 
