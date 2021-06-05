@@ -15,9 +15,9 @@ import utils
 from models.autoencoders import ConvAutoencoder
 
 
-def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int,
-          loss_criterion: str, model_dir: str, apply_nested_dropout: bool, plateau_limit: int, config: dict,
-          lr_scheduler=None, logger: Logger = None):
+def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int, loss_criterion: str,
+          model_dir: str, plateau_limit: int, config: dict, lr_scheduler=None, logger: Logger = None):
+    # TODO After making sure unoptimized nested dropout works, use only the fact that it is optimized for prints
     print(f'The model has {utils.get_num_parameters(model):,} parameters')
     loss_function = getattr(nn, loss_criterion)()
     batch_print = len(dataloader) // 5
@@ -33,7 +33,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     for epoch in range(epochs):
         epoch_start = time.time()
         line = f'\tEpoch {epoch + 1}/{epochs}'
-        if apply_nested_dropout and epoch > 0:
+        if model.apply_nested_dropout and epoch > 0:
             line += f' ({model.get_converged_unit()}/{model.get_dropout_dim()} converged units)'
         print(line)
 
@@ -52,7 +52,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                 batch_loss = utils.format_number(np.average(batch_losses[-batch_print:]))
                 print(f'Batch {i + 1} loss: {batch_loss}')
 
-            if apply_nested_dropout and not model.has_converged():
+            if model.apply_nested_dropout and model.optimize_dropout and not model.has_converged():
                 model(X)
                 # if model.has_converged():
                 #     break
@@ -74,7 +74,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             has_improved = True
             model_save_dict['performance']['best_loss'] = best_loss
 
-        if apply_nested_dropout:
+        if model.apply_nested_dropout:
             model_save_dict['performance']['converged_unit'] = model.get_converged_unit()
             model_save_dict['performance']['dropout_dim'] = model.get_dropout_dim()
 
@@ -104,7 +104,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                                      iteration=iteration)
                 logger.report_scalar('Learning Rate', 'Initial', optimizer.defaults['lr'],
                                      iteration=iteration)
-            if apply_nested_dropout:
+            if model.apply_nested_dropout:
                 logger.report_scalar('Nested Dropout', 'Converged Unit',
                                      model.get_converged_unit(), iteration=iteration)
                 logger.report_scalar('Nested Dropout', 'Dropout Dimension',
@@ -113,7 +113,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         # if (plateau == plateau_limit) or (apply_nested_dropout is True and model.has_converged()):
         #     break
 
-    if False:  # apply_nested_dropout is True and model.has_converged():
+    if model.apply_nested_dropout is True and model.has_converged():
         end = 'Nested dropout has converged'
     elif plateau == plateau_limit:
         end = 'The model has plateaued'
@@ -148,11 +148,10 @@ def train_cae(cfg):
     model_name = f'cae-{cfg["model"]["mode"]}-{type(model).__name__}_{current_time}'
     model_dir = f'{utils.save_dir}/{model_name}'
 
-    if apply_nested_dropout:
+    if model.apply_nested_dropout:
         model_name += ' - Nested Dropout'
     task.set_name(model_name)
     logger = task.get_logger()
 
-    train(model, optimizer, dataloader, lr_scheduler=lr_scheduler, model_dir=model_dir,
-          apply_nested_dropout=apply_nested_dropout, config=cfg, **cfg['train'],
-          logger=logger)
+    train(model, optimizer, dataloader, model_dir=model_dir, config=cfg, lr_scheduler=lr_scheduler, logger=logger,
+          **cfg['train'])

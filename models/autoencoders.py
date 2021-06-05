@@ -60,11 +60,13 @@ class FCAutoencoder(Autoencoder):
 
 
 class ConvAutoencoder(Autoencoder):
-    # TODO implement function which returns the output of the nested dropout layer
-    def __init__(self, mode='A', apply_nested_dropout=False, activation='ReLU', image_mode='RGB', **kwargs):
+    def __init__(self, mode='A', apply_nested_dropout=False, optimize_dropout=False,
+                 activation='ReLU', image_mode='RGB', **kwargs):
         super(ConvAutoencoder, self).__init__()
         if apply_nested_dropout:
-            self._nested_dropout_layer = NestedDropout(**kwargs)
+            self._nested_dropout_layer = NestedDropout(**kwargs, optimize_dropout=optimize_dropout)
+            self.optimize_dropout = optimize_dropout
+
 
         self.mode = mode
         self.apply_nested_dropout = apply_nested_dropout

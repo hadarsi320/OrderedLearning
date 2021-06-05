@@ -7,6 +7,7 @@ import utils
 __all__ = ['NestedDropout']
 
 
+# TODO create a __str__ function for this object
 class NestedDropout(nn.Module):
     def __init__(self, p=0.1, optimize_dropout=True, tol=1e-3, sequence_bound=2 ** 4, **kwargs):
         super(NestedDropout, self).__init__()
@@ -14,12 +15,12 @@ class NestedDropout(nn.Module):
         self.optimize_dropout = optimize_dropout
         self._dropout_dim = None
         self._converged_unit = 0
+        self._has_converged = False
 
         if self.optimize_dropout:
             self._tol = tol
             self._sequence = 0
             self._sequence_bound = sequence_bound
-            self._has_converged = False
             self._old_repr = None
 
     def forward(self, x):
