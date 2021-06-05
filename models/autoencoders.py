@@ -250,17 +250,17 @@ class ConvAutoencoder(Autoencoder):
 
     def has_converged(self):
         if self.apply_nested_dropout:
-            return self._nested_dropout_layer.has_converged
+            return self._nested_dropout_layer.has_converged()
         return None
 
     def get_converged_unit(self):
         if self.apply_nested_dropout:
-            return self._nested_dropout_layer.converged_unit
+            return self._nested_dropout_layer.converged_unit()
         return None
 
     def get_dropout_dim(self):
         if self.apply_nested_dropout:
-            return self._nested_dropout_layer.dropout_dim
+            return self._nested_dropout_layer.dropout_dim()
         return None
 
     def get_feature_map(self, x: torch.Tensor, depth):

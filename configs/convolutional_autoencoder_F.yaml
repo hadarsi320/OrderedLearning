@@ -12,6 +12,7 @@ model:
 nested_dropout:
   apply_nested_dropout: True
   p: 0.1
+  optimize_dropout: True
   sequence_bound: 32
   tol: 1.e-5
 optim:

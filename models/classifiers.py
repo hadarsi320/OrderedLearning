@@ -125,17 +125,17 @@ class Classifier(nn.Module):
     def has_converged(self):
         if not self.apply_nested_dropout:
             return None
-        return self._dropout_layer.has_converged
+        return self._dropout_layer._has_converged
 
     def get_converged_unit(self):
         if not self.apply_nested_dropout:
             return None
-        return self._dropout_layer.converged_unit
+        return self._dropout_layer._converged_unit
 
     def get_dropout_dim(self):
         if not self.apply_nested_dropout:
             return None
-        return self._dropout_layer.dropout_dim
+        return self._dropout_layer._dropout_dim
 
     def get_weights(self, depth):
         i = 0

@@ -127,7 +127,8 @@ def train_cae(cfg):
     matplotlib.use('agg')
     apply_nested_dropout = cfg['nested_dropout']['apply_nested_dropout']
 
-    task = Task.init(project_name="Ordered Learning")
+    # task = Task.init(project_name="Ordered Learning")
+    task = Task.init(project_name="Testing")
     task.connect_configuration(cfg, name='Model Configuration')
 
     data_module = getattr(data, cfg['data']['dataset'])
@@ -151,6 +152,7 @@ def train_cae(cfg):
         model_name += ' - Nested Dropout'
     task.set_name(model_name)
     logger = task.get_logger()
+
     train(model, optimizer, dataloader, lr_scheduler=lr_scheduler, model_dir=model_dir,
           apply_nested_dropout=apply_nested_dropout, config=cfg, **cfg['train'],
           logger=logger)
