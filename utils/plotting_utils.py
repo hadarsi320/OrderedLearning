@@ -11,7 +11,7 @@ def restore_image(image, mean, std, im_format='RGB') -> torch.tensor:
     return to_rgb(restored_image, im_format).permute(1, 2, 0)
 
 
-def plot_subfigures(images, cmap=None, title=None, figsize_scale=1, show=True):
+def plot_subfigures(images, cmap=None, title=None, figsize_scale=1, show=True, vmin=None, vmax=None):
     output_shape = images.shape[:2]
     fig, axes_mat = plt.subplots(*output_shape, figsize=(output_shape[1] * figsize_scale,
                                                          output_shape[0] * figsize_scale))
@@ -19,7 +19,7 @@ def plot_subfigures(images, cmap=None, title=None, figsize_scale=1, show=True):
         for j, (image, axis) in enumerate(zip(image_row, axes)):
             axis.set_xticks([])
             axis.set_yticks([])
-            axis.imshow(image, cmap=cmap)
+            axis.imshow(image, cmap=cmap, vmin=vmin, vmax=vmax)
     if title is not None:
         fig.suptitle(title)
     plt.tight_layout()

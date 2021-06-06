@@ -237,7 +237,8 @@ def plot_filters(model, title=None, output_shape=None, cmap='Greys', show=True):
         assert output_shape[1] % channels == 0
         assert shape[0] * shape[1] == output_shape[0] * output_shape[1]
     filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
-    utils.plot_subfigures(filter_matrix, cmap=cmap, title=title, show=show)
+    utils.plot_subfigures(filter_matrix, cmap=cmap, title=title, show=show,
+                          vmin=filter_matrix.min(), vmax=filter_matrix.max())
 
 
 @torch.no_grad()
