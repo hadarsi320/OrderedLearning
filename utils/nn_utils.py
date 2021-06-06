@@ -98,7 +98,7 @@ def save_model(model, optimizer, file_name, config):
 
     if model.apply_nested_dropout:
         config['performance'].update(converged_unit=model.get_converged_unit(),
-                                     has_converged=model._has_converged())
+                                     has_converged=model.has_converged())
 
     torch.save(dict(model=model.state_dict(), optimizer=optimizer.state_dict()),
                f'{file_name}.pt')
