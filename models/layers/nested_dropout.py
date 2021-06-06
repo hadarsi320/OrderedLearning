@@ -59,14 +59,10 @@ class NestedDropout(nn.Module):
             self._sequence = 0
 
     def has_converged(self):
-        if self.optimize_dropout:
-            return self._has_converged
-        return None
+        return self._has_converged
 
     def converged_unit(self):
-        if self.optimize_dropout:
-            return self._converged_unit
-        return None
+        return self._converged_unit
 
     def dropout_dim(self):
         return self._dropout_dim
