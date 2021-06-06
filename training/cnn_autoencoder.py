@@ -125,10 +125,8 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
 
 def train_cae(cfg):
     matplotlib.use('agg')
-    apply_nested_dropout = cfg['nested_dropout']['apply_nested_dropout']
 
-    # task = Task.init(project_name="Ordered Learning")
-    task = Task.init(project_name="Testing")
+    task = Task.init(project_name="Ordered Learning")
     task.connect_configuration(cfg, name='Model Configuration')
 
     data_module = getattr(data, cfg['data']['dataset'])
