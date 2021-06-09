@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from clearml import Task
 from clearml.logger import Logger
-from torch import nn
-from torch import optim
+from ranger import Ranger
+from torch import nn, optim
 from torch.utils.data import DataLoader
 
 import data
@@ -31,6 +31,8 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     plateau = 0
     train_time = 0
     for epoch in range(epochs):
+        learning_rate = utils.get_learning_rate(optimizer)
+
         epoch_start = time.time()
         line = f'\tEpoch {epoch + 1}/{epochs}'
         if model.apply_nested_dropout and epoch > 0:
@@ -100,7 +102,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                                             report_image=True)
             plt.close()
             if lr_scheduler is not None:
-                logger.report_scalar('Learning Rate', 'Current', utils.get_learning_rate(optimizer),
+                logger.report_scalar('Learning Rate', 'Current', learning_rate,
                                      iteration=iteration)
                 logger.report_scalar('Learning Rate', 'Initial', optimizer.defaults['lr'],
                                      iteration=iteration)
@@ -123,14 +125,14 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     utils.update_save(f'{model_dir}/model', end=end)
 
 
-def train_cae(cfg):
+def train_cae(cfg: dict, task: Task = None):
     matplotlib.use('agg')
 
-    task = Task.init(project_name="Ordered Learning")
-    task.connect_configuration(cfg, name='Model Configuration')
-
     data_module = getattr(data, cfg['data']['dataset'])
-    optimizer_model = getattr(optim, cfg['optim']['optimizer'])
+    if cfg['optim']['optimizer'] == 'Ranger':
+        optimizer_model = Ranger
+    else:
+        optimizer_model = getattr(optim, cfg['optim']['optimizer'])
 
     dataloader = data_module.get_dataloader(**cfg['data']['kwargs'])
     model = ConvAutoencoder(**cfg['model'], **cfg['nested_dropout'], **cfg['data']['kwargs'])
@@ -143,13 +145,17 @@ def train_cae(cfg):
         lr_scheduler = None
 
     current_time = utils.get_current_time()
-    model_name = f'cae-{cfg["model"]["mode"]}-{type(model).__name__}_{current_time}'
+    model_name = f'{type(model).__name__}-{cfg["model"]["mode"]}_{current_time}'
     model_dir = f'{utils.save_dir}/{model_name}'
 
     if model.apply_nested_dropout:
         model_name += ' - Nested Dropout'
-    task.set_name(model_name)
-    logger = task.get_logger()
+
+    if task is not None:
+        task.set_name(model_name)
+        logger = task.get_logger()
+    else:
+        logger = None
 
     train(model, optimizer, dataloader, model_dir=model_dir, config=cfg, lr_scheduler=lr_scheduler, logger=logger,
           **cfg['train'])
