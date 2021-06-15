@@ -67,7 +67,6 @@ class ConvAutoencoder(Autoencoder):
             self._nested_dropout_layer = NestedDropout(**kwargs, optimize_dropout=optimize_dropout)
             self.optimize_dropout = optimize_dropout
 
-
         self.mode = mode
         self.apply_nested_dropout = apply_nested_dropout
         self._encoder, self._decoder = self.create_cae(image_mode, activation, **kwargs)
@@ -87,7 +86,7 @@ class ConvAutoencoder(Autoencoder):
         -------
         Encoder and Decoder layers
         """
-        activation_function = getattr(nn, activation)
+        activation_function = getattr(activations, activation)
         batch_norm = batch_norm
         channels = 1 if image_mode == 'Y' else 3
 
@@ -197,26 +196,22 @@ class ConvAutoencoder(Autoencoder):
                                                                               normalize)
 
         elif self.mode == 'H':
-            channels_list = [64, 32, 16]
+            channels_list = [64, 128, 256]
             conv_args_list = [{'kernel_size': 8, 'stride': 8},
                               {'kernel_size': 2, 'stride': 2},
-                              {'kernel_size': 2, 'stride': 2},
-                              ]
-
+                              {'kernel_size': 2, 'stride': 2}]
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
                                                                               normalize)
 
         elif self.mode == 'I':
-            channels_list = [64, 128, 128, 256, 256, 512]
+            channels_list = [64, 64, 64]
             conv_args_list = [{'kernel_size': 8, 'stride': 8},
                               {'kernel_size': 2, 'stride': 2},
-                              {'kernel_size': 3, 'padding': 1},
-                              {'kernel_size': 2, 'stride': 2},
-                              {'kernel_size': 3, 'padding': 1},
-                              {'kernel_size': 3, 'padding': 1}]
-            encoder_layers, decoder_layers = self.generate_autoencoder_layers(
-                channels_list, conv_args_list, channels, activation_function, batch_norm, normalize)
+                              {'kernel_size': 2, 'stride': 2}]
+            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
+                                                                              activation_function, batch_norm,
+                                                                              normalize)
 
         else:
             raise NotImplementedError(f'self.mode {self.mode} not implemented')
