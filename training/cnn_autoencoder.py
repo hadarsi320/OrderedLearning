@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from clearml import Task
 from clearml.logger import Logger
-from ranger import Ranger
+from ranger.ranger2020 import Ranger
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
@@ -56,8 +56,8 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
 
             if model.apply_nested_dropout and model.optimize_dropout and not model.has_converged():
                 model(X)
-                # if model.has_converged():
-                #     break
+                if model.has_converged():
+                    break
 
         epoch_loss = utils.format_number(np.average(batch_losses))
         losses.append(epoch_loss)
@@ -95,25 +95,10 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             plateau += 1
 
         if logger is not None:
-            iteration = epoch + 1
-            logger.report_scalar('Model Loss', 'Train Loss', epoch_loss, iteration=iteration)
-            model_visualizations.plot_filters(model, output_shape=(8, 8), show=False)
-            logger.report_matplotlib_figure('Model Filters', 'Filters', figure=plt, iteration=iteration,
-                                            report_image=True)
-            plt.close()
-            if lr_scheduler is not None:
-                logger.report_scalar('Learning Rate', 'Current', learning_rate,
-                                     iteration=iteration)
-                logger.report_scalar('Learning Rate', 'Initial', optimizer.defaults['lr'],
-                                     iteration=iteration)
-            if model.apply_nested_dropout:
-                logger.report_scalar('Nested Dropout', 'Converged Unit',
-                                     model.get_converged_unit(), iteration=iteration)
-                logger.report_scalar('Nested Dropout', 'Dropout Dimension',
-                                     model.get_dropout_dim(), iteration=iteration)
+            report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, epoch_loss)
 
-        # if (plateau == plateau_limit) or (apply_nested_dropout is True and model.has_converged()):
-        #     break
+        if (plateau == plateau_limit) or model.has_converged():
+            break
 
     if model.apply_nested_dropout is True and model.has_converged():
         end = 'Nested dropout has converged'
@@ -123,6 +108,29 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         end = f'Reached max number of epochs ({epochs})'
     print(end)
     utils.update_save(f'{model_dir}/model', end=end)
+
+
+def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, epoch_loss):
+    iteration = epoch + 1
+    logger.report_scalar('Model Loss', 'Train Loss', epoch_loss, iteration=iteration)
+    model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=True)
+    logger.report_matplotlib_figure('Model Filters Normalized', 'Filters', figure=plt, iteration=iteration,
+                                    report_image=True)
+    plt.close()
+    model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=False)
+    logger.report_matplotlib_figure('Model Filters Unnormalized', 'Filters', figure=plt, iteration=iteration,
+                                    report_image=True)
+    plt.close()
+    if lr_scheduler is not None:
+        logger.report_scalar('Learning Rate', 'Current', learning_rate,
+                             iteration=iteration)
+        logger.report_scalar('Learning Rate', 'Initial', optimizer.defaults['lr'],
+                             iteration=iteration)
+    if model.apply_nested_dropout:
+        logger.report_scalar('Nested Dropout', 'Converged Unit',
+                             model.get_converged_unit(), iteration=iteration)
+        logger.report_scalar('Nested Dropout', 'Dropout Dimension',
+                             model.get_dropout_dim(), iteration=iteration)
 
 
 def train_cae(cfg: dict, task: Task = None):
@@ -159,3 +167,17 @@ def train_cae(cfg: dict, task: Task = None):
 
     train(model, optimizer, dataloader, model_dir=model_dir, config=cfg, lr_scheduler=lr_scheduler, logger=logger,
           **cfg['train'])
+
+    if logger is not None:
+        model.eval()
+        model_visualizations.plot_images_by_channels(model, data_module,
+                                                     normalized=cfg['data']['kwargs']['normalize'],
+                                                     im_format='Y', show=False)
+        logger.report_matplotlib_figure('Images by Num Channels', 'Images', figure=plt,
+                                        report_image=False)
+        plt.close()
+
+        model_visualizations.plot_conv_autoencoder_reconstruction_error(model, dataloader, show=False)
+        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Error', figure=plt,
+                                        report_image=False)
+        plt.close()
