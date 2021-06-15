@@ -125,10 +125,11 @@ from models import ConvAutoencoder
 
 
 @torch.no_grad()
-def plot_images_by_channels(model: ConvAutoencoder, data_module, normalized, im_format='RGB'):
+def plot_images_by_channels(model: ConvAutoencoder, data_module, normalized, im_format='RGB', show=True):
     torch.random.manual_seed(42)
     num_channels = [1, 2, 4, 8, 16, 32, 64, 'Original']
     num_images = len(num_channels)
+    model.to(torch.device('cpu'))
 
     images, _ = next(iter(data_module.get_dataloader(batch_size=num_images, normalize=normalized)))
 
@@ -153,7 +154,8 @@ def plot_images_by_channels(model: ConvAutoencoder, data_module, normalized, im_
             axis.set_yticks([])
             if i == 0:
                 axis.set_ylabel(n, fontsize=16)
-    plt.show()
+    if show:
+        plt.show()
 
 
 @torch.no_grad()
@@ -181,8 +183,9 @@ def reconstruct_images(autoencoder, dataloader, normalized, data_module):
 
 
 @torch.no_grad()
-def get_reconstruction_error(autoencoder: ConvAutoencoder, dataloader, dim, device, subset=1000):
+def get_reconstruction_error(autoencoder: ConvAutoencoder, dataloader, dim, device, frac=0.1):
     loss_func = nn.MSELoss()
+    subset = round(len(dataloader) * frac)
 
     losses = [[] for _ in range(dim)]
     for i, (sample, _) in tqdm(enumerate(dataloader), total=subset):
@@ -203,12 +206,11 @@ def get_reconstruction_error(autoencoder: ConvAutoencoder, dataloader, dim, devi
 
 
 @torch.no_grad()
-def plot_cae_reconstruction_error(nd_autoencoder, dataloader):
+def plot_conv_autoencoder_reconstruction_error(autoencoder, dataloader, repr_dim=64, show=True, scale='linear'):
     # Reconstructing
-    repr_dim = 64
     device = utils.get_device()
-    nd_autoencoder = nd_autoencoder.to(device)
-    nested_dropout_losses = get_reconstruction_error(nd_autoencoder, dataloader, repr_dim, device)
+    autoencoder = autoencoder.to(device)
+    nested_dropout_losses = get_reconstruction_error(autoencoder, dataloader, repr_dim, device)
 
     # Plotting
     indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
@@ -219,14 +221,14 @@ def plot_cae_reconstruction_error(nd_autoencoder, dataloader):
         plt.ylabel('Reconstruction Error')
         plt.xticks(indices)
         plt.title('Error by Channels')
-        if i == 0:
-            plt.yscale('log')
+        plt.yscale(scale)
         plt.tight_layout()
-        plt.show()
+        if show:
+            plt.show()
 
 
 @torch.no_grad()
-def plot_filters(model, title=None, output_shape=None, cmap='Greys', show=True):
+def plot_filters(model, title=None, output_shape=None, cmap='Greys', show=True, normalize=False):
     filter_matrix = model.get_weights(1)[0].cpu().numpy()
     shape = filter_matrix.shape
     channels = shape[1]
@@ -237,8 +239,12 @@ def plot_filters(model, title=None, output_shape=None, cmap='Greys', show=True):
         assert output_shape[1] % channels == 0
         assert shape[0] * shape[1] == output_shape[0] * output_shape[1]
     filter_matrix = np.reshape(filter_matrix, (*output_shape, *shape[2:]))
-    utils.plot_subfigures(filter_matrix, cmap=cmap, title=title, show=show,
-                          vmin=filter_matrix.min(), vmax=filter_matrix.max())
+
+    kwargs = {}
+    if normalize:
+        kwargs['vmin'] = filter_matrix.min()
+        kwargs['vmax'] = filter_matrix.max()
+    utils.plot_subfigures(filter_matrix, cmap=cmap, title=title, show=show, **kwargs)
 
 
 @torch.no_grad()
@@ -285,9 +291,9 @@ def model_plots(model_save: str, device, name=None, image=None):
         title += '\n' + name
     plot_filters(model, title=title)
 
-    if image is not None:
-        conv = list(list(model.children())[-1].children())[0]
-        plot_feature_maps(conv, image)
+    # if image is not None:
+    #     conv = list(list(model.children())[-1].children())[0]
+    #     plot_feature_maps(conv, image)
 
     # if apply_nested_dropout:
     #     plot_images_by_channels(model, imagenette, True, 'Y')
@@ -328,12 +334,13 @@ def compare_models(vanilla_dir, dropout_dir, device):
 def main():
     device = utils.get_device()
     saves_dir = 'saves'
-    compare_models(f'{saves_dir}/cae-F-ConvAutoencoder_21-06-01--10-43-39',
-                   f'{saves_dir}/cae-F-ConvAutoencoder_21-06-03--08-16-48',
-                   device)
-    # for model_save in sorted(os.listdir(saves_dir)):
-    #     if 'F-Conv' in model_save:
-    #         model_plots(saves_dir + '/' + model_save, device, name=model_save)
+    # compare_models(f'{saves_dir}/cae-F-ConvAutoencoder_21-06-01--10-43-39',
+    #                f'{saves_dir}/cae-F-ConvAutoencoder_21-06-03--08-16-48',
+    #                device)
+    # good_vanilla_filters = f'{saves_dir}/cae-F-ConvAutoencoder_21-06-01--10-43-39'
+    for model_save in sorted(os.listdir(saves_dir)):
+        if 'F-Conv' in model_save:
+            model_plots(saves_dir + '/' + model_save, device, name=model_save)
 
 
 if __name__ == '__main__':
