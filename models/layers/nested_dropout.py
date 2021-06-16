@@ -9,53 +9,42 @@ __all__ = ['NestedDropout']
 
 # TODO create an __str__ function for this module
 class NestedDropout(nn.Module):
-    def __init__(self, p=0.1, optimize_dropout=True, tol=1e-3, sequence_bound=2 ** 4, freeze_gradients=False, **kwargs):
+    def __init__(self, p=0.1, tol=1e-3, freeze_gradients=False, past_module: nn.Module = None, **kwargs):
         super(NestedDropout, self).__init__()
         self.distribution = Geometric(p)
-        self.optimize_dropout = optimize_dropout
-        self._dropout_dim = None
+        self.past_module = past_module
+        self._freeze_gradients = freeze_gradients
+        self._tol = tol
         self._converged_unit = 0
+        self._dropout_dim = None
         self._has_converged = False
-
-        if self.optimize_dropout:
-            self._tol = tol
-            self._freeze_gradients = freeze_gradients
-            self._sequence = 0
-            self._sequence_bound = sequence_bound
-            self._old_repr = None
+        self._old_weight = None
 
     def forward(self, x):
         if self._dropout_dim is None:
             self._dropout_dim = x.shape[1]
 
         if self.training and not self._has_converged:
-            if self.optimize_dropout and self._old_repr is not None:
-                self.check_convergence(x)
-                self._old_repr = None
-                return x.detach()
-                # detaching so no gradients flow when checking convergence
-
-            self._old_repr = x
             x = nested_dropout(x, self.distribution, self._converged_unit)
-
-            if self.optimize_dropout and self._freeze_gradients:
+            if self._freeze_gradients:
                 x[:, :self._converged_unit] = x[:, :self._converged_unit].detach()
         return x
 
-    def check_convergence(self, x):
-        # z = (x - self._old_repr)[:, :self._converged_unit + 1].reshape(-1)
-        z = (x - self._old_repr)[:, self._converged_unit].reshape(-1)
+    def save_weight(self):
+        self._old_weight = torch.clone(self.past_module.weight).detach()
+
+    def check_convergence(self):
+        if self._old_weight is None:
+            raise Exception('check_convergence ran before save_weight ran')
+
+        z = (self.past_module.weight - self._old_weight)[self._converged_unit].reshape(-1)
         difference = linalg.norm(z) / len(z)
 
         if difference <= self._tol:
-            self._sequence += 1
-            if self._sequence == self._sequence_bound:
-                self._sequence = 0
-                self._converged_unit += 1
-                if self._converged_unit == self._dropout_dim:
-                    self._has_converged = True
-        else:
-            self._sequence = 0
+            self._converged_unit += 1
+            if self._converged_unit == self._dropout_dim:
+                self._has_converged = True
+        self._old_weight = None
 
     def has_converged(self):
         return self._has_converged

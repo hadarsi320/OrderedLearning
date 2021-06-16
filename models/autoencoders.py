@@ -64,6 +64,7 @@ class ConvAutoencoder(Autoencoder):
                  activation='ReLU', image_mode='RGB', **kwargs):
         super(ConvAutoencoder, self).__init__()
         if apply_nested_dropout:
+            print('Nested Dropout is being used.')
             self._nested_dropout_layer = NestedDropout(**kwargs, optimize_dropout=optimize_dropout)
             self.optimize_dropout = optimize_dropout
 
@@ -218,6 +219,7 @@ class ConvAutoencoder(Autoencoder):
             if first:
                 if self.apply_nested_dropout:
                     encoder_layers.append(self._nested_dropout_layer)
+                    self._nested_dropout_layer.past_module = encoder_layers[0]
                 first = False
                 if not normalized:
                     # Scales our predictions to [0, 1] range
@@ -275,3 +277,9 @@ class ConvAutoencoder(Autoencoder):
                 if i == depth:
                     forward = True
         return out
+
+    def save_dropout_weight(self):
+        self._nested_dropout_layer.save_weight()
+
+    def check_dropout_convergence(self):
+        self._nested_dropout_layer.check_convergence()
