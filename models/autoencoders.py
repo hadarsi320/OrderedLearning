@@ -182,20 +182,6 @@ class ConvAutoencoder(Autoencoder):
                                                                               normalize)
 
         elif self.mode == 'G':
-            channels_list = [64, 32, 32, 32, 16, 16, 16]
-            conv_args_list = [{'kernel_size': 8, 'stride': 8},
-                              {'kernel_size': 2, 'stride': 2},
-                              {'kernel_size': 3, 'padding': 1},
-                              {'kernel_size': 3, 'padding': 1},
-                              {'kernel_size': 2, 'stride': 2},
-                              {'kernel_size': 3, 'padding': 1},
-                              {'kernel_size': 3, 'padding': 1}]
-
-            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                              activation_function, batch_norm,
-                                                                              normalize)
-
-        elif self.mode == 'H':
             channels_list = [64, 128, 256]
             conv_args_list = [{'kernel_size': 8, 'stride': 8},
                               {'kernel_size': 2, 'stride': 2},
@@ -204,7 +190,7 @@ class ConvAutoencoder(Autoencoder):
                                                                               activation_function, batch_norm,
                                                                               normalize)
 
-        elif self.mode == 'I':
+        elif self.mode == 'H':
             channels_list = [64, 64, 64]
             conv_args_list = [{'kernel_size': 8, 'stride': 8},
                               {'kernel_size': 2, 'stride': 2},
