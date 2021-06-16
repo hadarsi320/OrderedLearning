@@ -9,13 +9,14 @@ from training import cnn_autoencoder
 # TODO create a nested dropout module
 if __name__ == '__main__':
     start_time = time()
-    original_cfg = utils.load_yaml('configs/convolutional_autoencoder_F.yaml')
-    for lr in [5e-2, 1e-2, 5e-3, 1e-3]:
-        cfg = original_cfg.copy()
-        cfg['optim']['optimizer_kwargs']['lr'] = lr
+    original_cfg = utils.load_yaml('configs/conv_ae_vanilla.yaml')
 
-        task = Task.init(project_name="Ordered Learning")
+    for mode in ['F', 'G', 'H']:
+        cfg = original_cfg.copy()
+        cfg['model']['mode'] = mode
+
+        task = Task.init(project_name='Ordered Learning')
         task.connect_configuration(cfg, name='Model Configuration')
         cnn_autoencoder.train_cae(cfg, task)
         task.close()
-    print(f'Total run time: {timedelta(seconds=time() - start_time)}')
+        print(f'Total run time: {timedelta(seconds=time() - start_time)}')
