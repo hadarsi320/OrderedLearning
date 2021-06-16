@@ -46,6 +46,8 @@ class NestedDropout(nn.Module):
                 self._has_converged = True
         self._old_weight = None
 
+        return difference
+
     def has_converged(self):
         return self._has_converged
 

@@ -58,7 +58,9 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                 print(f'Batch {i + 1} loss: {batch_loss}')
 
         if model.apply_nested_dropout:
-            model.check_dropout_convergence()
+            difference = model.check_dropout_convergence()
+            if logger is not None:
+                logger.report_scalar('Convergence Residuals', 'Difference', difference, iteration=epoch+1)
 
         epoch_loss = utils.format_number(np.average(batch_losses))
         losses.append(epoch_loss)

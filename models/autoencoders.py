@@ -282,4 +282,4 @@ class ConvAutoencoder(Autoencoder):
         self._nested_dropout_layer.save_weight()
 
     def check_dropout_convergence(self):
-        self._nested_dropout_layer.check_convergence()
+        return self._nested_dropout_layer.check_convergence()
