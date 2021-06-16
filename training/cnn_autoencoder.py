@@ -39,6 +39,9 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             line += f' ({model.get_converged_unit()}/{model.get_dropout_dim()} converged units)'
         print(line)
 
+        if model.apply_nested_dropout:
+            model.save_dropout_weight()
+
         batch_losses = []
         for i, (X, _) in enumerate(dataloader):
             optimizer.zero_grad()
@@ -54,10 +57,8 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                 batch_loss = utils.format_number(np.average(batch_losses[-batch_print:]))
                 print(f'Batch {i + 1} loss: {batch_loss}')
 
-            if model.apply_nested_dropout and model.optimize_dropout and not model.has_converged():
-                model(X)
-                if model.has_converged():
-                    break
+        if model.apply_nested_dropout:
+            model.check_dropout_convergence()
 
         epoch_loss = utils.format_number(np.average(batch_losses))
         losses.append(epoch_loss)
