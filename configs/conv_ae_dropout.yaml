@@ -7,24 +7,22 @@ data:
     random_flip: True
 model:
   mode: F
-  activation: Mish
+  activation: ReLU
   batch_norm: False
 nested_dropout:
   apply_nested_dropout: True # important
   optimize_dropout: True
   freeze_gradients: True
   p: 0.1
-  tol: 1.e-5
+  tol: 1.e-4
 optim:
-  optimizer: Ranger
+  optimizer: Adam
   optimizer_kwargs:
     lr: 1.e-3  # important
-  lr_scheduler: StepLR
+  lr_scheduler: ReduceLROnPlateau
   lr_scheduler_kwargs:
-    step_size: 1
-    gamma: 0.98
-    verbose: False
+    patience: 10
 train:
   loss_criterion: MSELoss
-  epochs: 30
+  epochs: 100
   plateau_limit: None
