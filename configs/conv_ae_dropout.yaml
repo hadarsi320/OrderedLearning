@@ -14,7 +14,6 @@ nested_dropout:
   optimize_dropout: True
   freeze_gradients: True
   p: 0.1
-  sequence_bound: 64
   tol: 1.e-5
 optim:
   optimizer: Ranger
@@ -27,5 +26,5 @@ optim:
     verbose: False
 train:
   loss_criterion: MSELoss
-  epochs: 50
+  epochs: 30
   plateau_limit: None
