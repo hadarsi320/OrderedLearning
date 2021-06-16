@@ -4,7 +4,7 @@ from torch.distributions import Geometric
 
 import utils
 
-__all__ = ['NestedDropout']
+__all__ = ['NestedDropout', 'nested_dropout']
 
 
 class NestedDropout(nn.Module):
