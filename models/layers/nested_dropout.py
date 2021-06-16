@@ -70,15 +70,13 @@ class NestedDropout(nn.Module):
         return f'Nested Dropout distribution={self.distribution}'
 
 
-def nested_dropout(x: torch.Tensor, distribution=None, converged_unit=0, p=None):
+def nested_dropout(x: torch.Tensor, distribution=None, converged_unit=0, p=0.1):
     if distribution is None:
         distribution = Geometric(p)
 
     batch_size = x.shape[0]
     dropout_dim = x.shape[1]
     dropout_sample = distribution.sample((batch_size,)).type(torch.long)
-    dropout_sample = torch.minimum(dropout_sample, torch.tensor(dropout_dim - 1))
-
     mask = (torch.arange(dropout_dim) <= (dropout_sample.unsqueeze(1) + converged_unit))
     mask = utils.fit_dim(mask, x).to(x.device)
     x = mask * x
