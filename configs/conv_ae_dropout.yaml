@@ -2,34 +2,30 @@ data:
   dataset: imagenette
   kwargs:
     normalize: True
-    batch_size: 16
+    batch_size: 64  # important
     image_mode: Y
     random_flip: True
 model:
   mode: F
-  activation: ReLU
+  activation: Mish
   batch_norm: False
 nested_dropout:
-  apply_nested_dropout: True
+  apply_nested_dropout: True # important
+  optimize_dropout: True
+  freeze_gradients: True
   p: 0.1
-  optimize_dropout: False
-  sequence_bound: 32
+  sequence_bound: 64
   tol: 1.e-5
 optim:
-  optimizer: Adam
+  optimizer: Ranger
   optimizer_kwargs:
-    lr: 1.e-3  # Learning rate
-#  lr_scheduler: ReduceLROnPlateau
-#  lr_scheduler_kwargs:
-#    mode: min
-#    patience: 5
-#    verbose: True
+    lr: 1.e-3  # important
   lr_scheduler: StepLR
   lr_scheduler_kwargs:
     step_size: 1
     gamma: 0.98
-    verbose: True
+    verbose: False
 train:
   loss_criterion: MSELoss
-  epochs: 100
+  epochs: 50
   plateau_limit: None
