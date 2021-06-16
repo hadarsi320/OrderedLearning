@@ -7,7 +7,6 @@ import utils
 __all__ = ['NestedDropout']
 
 
-# TODO create an __str__ function for this module
 class NestedDropout(nn.Module):
     def __init__(self, p=0.1, optimize_dropout=True, tol=1e-3, sequence_bound=2 ** 4, freeze_gradients=False, **kwargs):
         super(NestedDropout, self).__init__()
