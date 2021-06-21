@@ -90,84 +90,11 @@ class ConvAutoencoder(Autoencoder):
         batch_norm = batch_norm
         channels = 1 if image_mode == 'Y' else 3
 
-        encoder_layers = []
-        decoder_layers = []
-
         if self.mode == 'A':
-            dim = 32
-            filter_size = 2
-            first = True
-            while dim >= filter_size:
-                new_channels = utils.get_power_successor(channels)
-                encoder_layers.append(nn.Conv2d(channels, new_channels, filter_size, filter_size))
-                encoder_layers.append(activation_function())
-                if batch_norm:
-                    encoder_layers.append(nn.BatchNorm2d(new_channels))
-
-                if first:
-                    first = False
-                    if not normalize:
-                        decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
-                else:
-                    if batch_norm:
-                        decoder_layers.append(nn.BatchNorm2d(channels))
-                    decoder_layers.append(activation_function())
-                decoder_layers.append(nn.ConvTranspose2d(new_channels, channels, filter_size, filter_size))
-
-                channels = new_channels
-                dim = dim / filter_size
-            decoder_layers = reversed(decoder_layers)
-
-        elif self.mode == 'B':
-            channels = 3
-            dim = 32
-            encoder_layers = []
-            decoder_layers = []
-
-            first = True
-            while dim >= 2:
-                new_channels = utils.get_power_successor(channels)
-                encoder_layers.append(nn.Conv2d(channels, new_channels, 4, stride=2, padding=1))
-                encoder_layers.append(activation_function())
-                if batch_norm:
-                    encoder_layers.append(nn.BatchNorm2d(new_channels))
-
-                if first:
-                    first = False
-                    if not normalize:
-                        decoder_layers.append(nn.Sigmoid())  # Scaled our predictions to [0, 1] range
-                else:
-                    if batch_norm:
-                        decoder_layers.insert(0, nn.BatchNorm2d(channels))
-                    decoder_layers.insert(0, activation_function())
-                decoder_layers.insert(0, nn.ConvTranspose2d(new_channels, channels, 4, stride=2, padding=1))
-
-                channels = new_channels
-                dim = dim / 2
-
-        elif self.mode == 'C':
-            channels_list = [32, 32, 64, 64]
-            conv_args_list = [{'kernel_size': 4, 'stride': 2, 'padding': 1},
-                              {'kernel_size': 4, 'stride': 2, 'padding': 1},
-                              {'kernel_size': 4, 'stride': 2, 'padding': 1},
-                              {'kernel_size': 4, 'stride': 2, 'padding': 1}]
-
-            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                              activation_function, batch_norm,
-                                                                              normalize)
-
-        elif self.mode == 'D':
-            channels_list = [8]
-            conv_args_list = [{'kernel_size': 8, 'stride': 8}]
-
-            encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
-                                                                              activation_function, batch_norm,
-                                                                              normalize)
-
-        elif self.mode == 'E':
-            channels_list = [64]
-            conv_args_list = [{'kernel_size': 8, 'stride': 8}]
-
+            channels_list = [64, 32, 16]
+            conv_args_list = [{'kernel_size': 8, 'stride': 8},
+                              {'kernel_size': 2, 'stride': 2},
+                              {'kernel_size': 2, 'stride': 2}]
             encoder_layers, decoder_layers = self.generate_autoencoder_layers(channels_list, conv_args_list, channels,
                                                                               activation_function, batch_norm,
                                                                               normalize)
