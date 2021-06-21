@@ -68,6 +68,7 @@ def estimate_code_variance(autoencoder, batch, batch_repr=None):
 
 @torch.no_grad()
 def get_model_loss(model, dataloader, loss_function, device=utils.get_device(), sample=None):
+    initial_mode = model.training
     model.eval()
     losses = []
     total = min(len(dataloader), sample) if sample is not None else len(dataloader)
@@ -77,6 +78,7 @@ def get_model_loss(model, dataloader, loss_function, device=utils.get_device(), 
         x, y = x.to(device), y.to(device)
         res = model(x)
         losses.append(loss_function(x, y, res).item())
+    model.train(initial_mode)
     return np.average(losses)
 
 
