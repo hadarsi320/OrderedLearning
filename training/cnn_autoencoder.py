@@ -8,6 +8,7 @@ from clearml.logger import Logger
 from ranger.ranger2020 import Ranger
 from torch import nn, optim
 from torch.utils.data import DataLoader
+from torch.nn import functional as F
 
 import data
 import model_visualizations
@@ -16,11 +17,11 @@ from models.autoencoders import ConvAutoencoder
 
 
 def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int, loss_criterion: str,
-          model_dir: str, plateau_limit: int, config: dict, lr_scheduler=None, logger: Logger = None):
+          model_dir: str, plateau_limit: int, config: dict, lr_scheduler=None, logger: Logger = None,
+          eval_dataloader: DataLoader = None):
     # TODO After making sure unoptimized nested dropout works, use only the fact that it is optimized for prints
     print(f'The model has {utils.get_num_parameters(model):,} parameters')
     loss_function = getattr(nn, loss_criterion)()
-    batch_print = len(dataloader) // 5
 
     device = utils.get_device()
     model.to(device)
@@ -34,10 +35,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         learning_rate = utils.get_learning_rate(optimizer)
 
         epoch_start = time.time()
-        line = f'\tEpoch {epoch + 1}/{epochs}'
-        if model.apply_nested_dropout and epoch > 0:
-            line += f' ({model.get_converged_unit()}/{model.get_dropout_dim()} converged units)'
-        print(line)
+        print(f'\tEpoch {epoch + 1}/{epochs}')
 
         batch_losses = []
         for i, (X, _) in enumerate(dataloader):
@@ -50,10 +48,6 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             optimizer.step()
 
             batch_losses.append(loss.item())
-            if (i + 1) % batch_print == 0:
-                batch_loss = utils.format_number(np.average(batch_losses[-batch_print:]))
-                print(f'Batch {i + 1} loss: {batch_loss}')
-
             if model.apply_nested_dropout and model.optimize_dropout and not model.has_converged():
                 model(X)
                 if model.has_converged():
@@ -65,8 +59,17 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         epoch_time = time.time() - epoch_start
         train_time += epoch_time
 
-        print(f'\tEpoch loss {epoch_loss}')
-        print(f'\tEpoch time {utils.format_time(epoch_time)}\n')
+        print(f'Train loss {epoch_loss}')
+        if eval_dataloader is None:
+            eval_loss = None
+        else:
+            eval_loss = utils.get_model_loss(model, eval_dataloader,
+                                             loss_function=lambda x, y, res: F.mse_loss(res, x),
+                                             device=device)
+            print(f'Eval loss {eval_loss}')
+        if model.apply_nested_dropout:
+            print(f'{model.get_converged_unit()}/{model.get_dropout_dim()} converged units')
+        print(f'Epoch time {utils.format_time(epoch_time)}\n')
 
         model_save_dict = config.copy()
         model_save_dict['performance'] = dict(epoch=epoch, train_time=utils.format_time(train_time), losses=losses)
@@ -110,9 +113,12 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     utils.update_save(f'{model_dir}/model', end=end)
 
 
-def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, epoch_loss):
+def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_loss, eval_loss=False):
     iteration = epoch + 1
-    logger.report_scalar('Model Loss', 'Train Loss', epoch_loss, iteration=iteration)
+    logger.report_scalar('Model Loss', 'Train Loss', train_loss, iteration=iteration)
+    if eval_loss is not None:
+        logger.report_scalar('Model Loss', 'Eval Loss', eval_loss, iteration=iteration)
+
     model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=True)
     logger.report_matplotlib_figure('Model Filters Normalized', 'Filters', figure=plt, iteration=iteration,
                                     report_image=True)
