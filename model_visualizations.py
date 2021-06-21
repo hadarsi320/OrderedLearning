@@ -264,7 +264,7 @@ def plot_feature_maps(conv_layer, image):
 
 
 @torch.no_grad()
-def model_plots(model_save: str, device, name=None, image=None):
+def model_plots(model_save: str, device, name=None, image=None, filters_normalize=False):
     if name is not None:
         print(name)
 
@@ -277,7 +277,8 @@ def model_plots(model_save: str, device, name=None, image=None):
     else:
         apply_nested_dropout = False
 
-    if os.path.basename(model_save).startswith('cae'):
+    if os.path.basename(model_save).startswith('cae') or \
+            os.path.basename(model_save).startswith('ConvAutoencoder'):
         title = 'Convolutional Autoencoder'
     elif os.path.basename(model_save).startswith('classifier'):
         title = 'Classifier'
@@ -289,7 +290,7 @@ def model_plots(model_save: str, device, name=None, image=None):
         title = f'Nested Dropout {title}'
     if name is not None:
         title += '\n' + name
-    plot_filters(model, title=title)
+    plot_filters(model, title=title, normalize=filters_normalize)
 
     # if image is not None:
     #     conv = list(list(model.children())[-1].children())[0]
@@ -337,10 +338,13 @@ def main():
     # compare_models(f'{saves_dir}/cae-F-ConvAutoencoder_21-06-01--10-43-39',
     #                f'{saves_dir}/cae-F-ConvAutoencoder_21-06-03--08-16-48',
     #                device)
-    # good_vanilla_filters = f'{saves_dir}/cae-F-ConvAutoencoder_21-06-01--10-43-39'
-    for model_save in sorted(os.listdir(saves_dir)):
-        if 'F-Conv' in model_save:
-            model_plots(saves_dir + '/' + model_save, device, name=model_save)
+
+    saves = ['ConvAutoencoder-F_21-06-09--04-57-08',
+             'ConvAutoencoder-F_21-06-09--12-32-29',
+             'ConvAutoencoder-F_21-06-16--19-26-45']
+    for save in saves:
+        model_plots(saves_dir + '/' + save, device, filters_normalize=False, name=save)
+        model_plots(saves_dir + '/' + save, device, filters_normalize=True, name=save)
 
 
 if __name__ == '__main__':

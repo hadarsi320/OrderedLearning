@@ -138,7 +138,7 @@ def load_model(model_save, device):
     if os.path.exists(f'{model_save}/model.yaml'):
         save_dict = utils.load_yaml(f'{model_save}/model.yaml')
         # TODO implement support for classifier
-        if dir_name.startswith('cae'):
+        if dir_name.startswith('cae') or dir_name.startswith('ConvAutoencoder'):
             model = ConvAutoencoder(**save_dict['model'], **save_dict['nested_dropout'], **save_dict['data']['kwargs'])
         else:
             raise NotImplementedError()
