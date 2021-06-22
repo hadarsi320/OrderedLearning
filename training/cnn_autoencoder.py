@@ -56,16 +56,18 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         epoch_loss = utils.format_number(np.average(batch_losses))
         losses.append(epoch_loss)
 
+        if eval_dataloader is None:
+            eval_loss = None
+        else:
+            eval_loss = utils.format_number(utils.get_model_loss(model, eval_dataloader,
+                                                                 loss_function=lambda x, y, res: F.mse_loss(res, x),
+                                                                 device=device, show_progress=False))
+
         epoch_time = time.time() - epoch_start
         train_time += epoch_time
 
         print(f'Train loss {epoch_loss}')
-        if eval_dataloader is None:
-            eval_loss = None
-        else:
-            eval_loss = utils.get_model_loss(model, eval_dataloader,
-                                             loss_function=lambda x, y, res: F.mse_loss(res, x),
-                                             device=device)
+        if eval_loss is not None:
             print(f'Eval loss {eval_loss}')
         if model.apply_nested_dropout:
             print(f'{model.get_converged_unit()}/{model.get_dropout_dim()} converged units')
@@ -98,7 +100,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             plateau += 1
 
         if logger is not None:
-            report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, epoch_loss)
+            report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, epoch_loss, eval_loss=eval_loss)
 
         if (plateau == plateau_limit) or model.has_converged():
             break
@@ -113,18 +115,18 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     utils.update_save(f'{model_dir}/model', end=end)
 
 
-def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_loss, eval_loss=False):
+def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_loss, eval_loss=None):
     iteration = epoch + 1
     logger.report_scalar('Model Loss', 'Train Loss', train_loss, iteration=iteration)
     if eval_loss is not None:
         logger.report_scalar('Model Loss', 'Eval Loss', eval_loss, iteration=iteration)
 
-    model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=True)
-    logger.report_matplotlib_figure('Model Filters Normalized', 'Filters', figure=plt, iteration=iteration,
-                                    report_image=True)
-    plt.close()
     model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=False)
     logger.report_matplotlib_figure('Model Filters Unnormalized', 'Filters', figure=plt, iteration=iteration,
+                                    report_image=True)
+    plt.close()
+    model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=True)
+    logger.report_matplotlib_figure('Model Filters Normalized', 'Filters', figure=plt, iteration=iteration,
                                     report_image=True)
     plt.close()
     if lr_scheduler is not None:
@@ -148,7 +150,8 @@ def train_cae(cfg: dict, task: Task = None):
     else:
         optimizer_model = getattr(optim, cfg['optim']['optimizer'])
 
-    dataloader = data_module.get_dataloader(**cfg['data']['kwargs'])
+    train_dataloader = data_module.get_dataloader(**cfg['data']['kwargs'], train=True)
+    eval_dataloader = data_module.get_dataloader(**cfg['data']['kwargs'], train=False)
     model = ConvAutoencoder(**cfg['model'], **cfg['nested_dropout'], **cfg['data']['kwargs'])
     optimizer = optimizer_model(params=model.parameters(), **cfg['optim']['optimizer_kwargs'])
 
@@ -171,8 +174,8 @@ def train_cae(cfg: dict, task: Task = None):
     else:
         logger = None
 
-    train(model, optimizer, dataloader, model_dir=model_dir, config=cfg, lr_scheduler=lr_scheduler, logger=logger,
-          **cfg['train'])
+    train(model, optimizer, train_dataloader, model_dir=model_dir, config=cfg, lr_scheduler=lr_scheduler, logger=logger,
+          **cfg['train'], eval_dataloader=eval_dataloader)
 
     if logger is not None:
         model.eval()
@@ -183,7 +186,12 @@ def train_cae(cfg: dict, task: Task = None):
                                         report_image=False)
         plt.close()
 
-        model_visualizations.plot_conv_autoencoder_reconstruction_error(model, dataloader, show=False)
-        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Error', figure=plt,
+        model_visualizations.plot_conv_autoencoder_reconstruction_error(model, train_dataloader, show=False)
+        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Train Error', figure=plt,
+                                        report_image=False)
+        plt.close()
+
+        model_visualizations.plot_conv_autoencoder_reconstruction_error(model, eval_dataloader, show=False)
+        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Evaluation Error', figure=plt,
                                         report_image=False)
         plt.close()
