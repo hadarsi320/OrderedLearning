@@ -67,12 +67,13 @@ def estimate_code_variance(autoencoder, batch, batch_repr=None):
 
 
 @torch.no_grad()
-def get_model_loss(model, dataloader, loss_function, device=utils.get_device(), sample=None):
+def get_model_loss(model, dataloader, loss_function, device=utils.get_device(), sample=None, show_progress=False):
     initial_mode = model.training
     model.eval()
     losses = []
     total = min(len(dataloader), sample) if sample is not None else len(dataloader)
-    for i, (x, y) in tqdm(enumerate(dataloader), total=total):
+    iterator = tqdm(enumerate(dataloader), total=total) if show_progress else enumerate(dataloader)
+    for i, (x, y) in iterator:
         if i == total:
             break
         x, y = x.to(device), y.to(device)
