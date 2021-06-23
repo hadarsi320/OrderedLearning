@@ -140,6 +140,11 @@ def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_l
         logger.report_scalar('Nested Dropout', 'Dropout Dimension',
                              model.get_dropout_dim(), iteration=iteration)
 
+    weights, _ = model.get_weights(0)
+    for mode in ['all pairs', 'serial']:
+        logger.report_scalar('Filter Product', mode.title(), utils.filters_product(weights, mode),
+                             iteration=iteration)
+
 
 def train_cae(cfg: dict, task: Task = None):
     matplotlib.use('agg')
