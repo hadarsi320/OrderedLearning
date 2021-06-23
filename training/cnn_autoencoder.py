@@ -126,12 +126,13 @@ def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_l
     if eval_loss is not None:
         logger.report_scalar('Model Loss', 'Eval Loss', eval_loss, iteration=iteration)
 
-    model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=False)
-    logger.report_matplotlib_figure('Model Filters Unnormalized', 'Filters', figure=plt, iteration=iteration,
-                                    report_image=True)
-    plt.close()
     model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=True)
     logger.report_matplotlib_figure('Model Filters Normalized', 'Filters', figure=plt, iteration=iteration,
+                                    report_image=True)
+    plt.close()
+
+    model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=False)
+    logger.report_matplotlib_figure('Model Filters Unnormalized', 'Filters', figure=plt, iteration=iteration,
                                     report_image=True)
     plt.close()
     if lr_scheduler is not None:
@@ -146,7 +147,7 @@ def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_l
                              model.get_dropout_dim(), iteration=iteration)
 
     weights, _ = model.get_weights(0)
-    for mode in ['all pairs', 'serial']:
+    for mode in ['all pairs', 'serial', 'row col']:
         logger.report_scalar('Filter Product', mode.title(), utils.filters_product(weights, mode),
                              iteration=iteration)
 
