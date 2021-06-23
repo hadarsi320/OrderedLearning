@@ -1,5 +1,7 @@
 import math
 
+import torch
+
 
 def is_power_of_2(n):
     return (n & (n - 1) == 0) and n != 0
@@ -21,3 +23,29 @@ def square_shape(x, y):
     while total % div != 0:
         div += 1
     return div, total // div
+
+
+def filters_product(weights: torch.Tensor, mode='all pairs'):
+    """
+    Parameters
+    ----------
+    weights The weights of a convolutional layer with input dim of 1
+    mode The mode of product to compute, either 'all pairs' or 'serial'
+
+    Returns
+    -------
+    The product of the filters
+    """
+    if weights.shape[1] != 1:
+        raise NotImplementedError('Filter products only implemented for convolutions with input dim 1')
+
+    if mode == 'all pairs':
+        product = weights.matmul(weights.squeeze().transpose(1, 2))
+
+    elif mode == 'serial':
+        product = weights[:-1].squeeze() @ weights[1:].squeeze().transpose(1, 2)
+
+    else:
+        raise ValueError('Mode must be either "all pairs" or "serial"')
+
+    return product.sum()
