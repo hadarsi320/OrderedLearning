@@ -25,7 +25,7 @@ def square_shape(x, y):
     return div, total // div
 
 
-def filters_product(weights: torch.Tensor, mode='all pairs'):
+def filters_product(weights: torch.Tensor, mode: str = 'all pairs') -> torch.Tensor:
     """
     Parameters
     ----------
@@ -48,4 +48,4 @@ def filters_product(weights: torch.Tensor, mode='all pairs'):
     else:
         raise ValueError('Mode must be either "all pairs" or "serial"')
 
-    return product.sum()
+    return product.pow(2).sum().sqrt()
