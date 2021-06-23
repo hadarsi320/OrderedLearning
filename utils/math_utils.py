@@ -30,7 +30,7 @@ def filters_product(weights: torch.Tensor, mode: str = 'all pairs') -> torch.Ten
     Parameters
     ----------
     weights The weights of a convolutional layer with input dim of 1
-    mode The mode of product to compute, either 'all pairs' or 'serial'
+    mode The mode of product to compute, either 'all pairs' or 'serial' or 'row col'
 
     Returns
     -------
@@ -41,11 +41,26 @@ def filters_product(weights: torch.Tensor, mode: str = 'all pairs') -> torch.Ten
 
     if mode == 'all pairs':
         product = weights.matmul(weights.squeeze().transpose(1, 2))
+        product_sum = product.pow(2).sum().sqrt()
 
     elif mode == 'serial':
         product = weights[:-1].squeeze() @ weights[1:].squeeze().transpose(1, 2)
+        product_sum = product.pow(2).sum().sqrt()
+
+    elif mode == 'row col':
+        if weights.shape != (64, 1, 8, 8):
+            raise NotImplementedError('row col mode only implemented for dct type convolutions')
+        weights = weights.reshape(8, 8, 8, 8)
+        product_sum = 0
+        for i in range(8):
+            row_prod = weights[i].unsqueeze(1) @ weights[i].transpose(-2, -1)
+            col_prod = weights[:, i].unsqueeze(1).transpose(-2, -1) @ weights[:, i]
+
+            product_sum += row_prod.pow(2).sum()
+            product_sum += col_prod.pow(2).sum()
+        product_sum = product_sum.sqrt()
 
     else:
-        raise ValueError('Mode must be either "all pairs" or "serial"')
+        raise ValueError('Mode must be either "all pairs", "serial" or "row col"')
 
-    return product.pow(2).sum().sqrt()
+    return product_sum
