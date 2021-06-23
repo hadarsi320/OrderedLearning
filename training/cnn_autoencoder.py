@@ -17,8 +17,8 @@ from models.autoencoders import ConvAutoencoder
 
 
 def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int, loss_criterion: str,
-          model_dir: str, plateau_limit: int, config: dict, lr_scheduler=None, logger: Logger = None,
-          eval_dataloader: DataLoader = None):
+          model_dir: str, plateau_limit: int, config: dict, lam: float = 1e-3, filter_prod_mode: str = None,
+          lr_scheduler=None, logger: Logger = None, eval_dataloader: DataLoader = None):
     # TODO After making sure unoptimized nested dropout works, use only the fact that it is optimized for prints
     print(f'The model has {utils.get_num_parameters(model):,} parameters')
     loss_function = getattr(nn, loss_criterion)()
@@ -44,6 +44,11 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             prediction = model(X)
 
             loss = loss_function(prediction, X)
+            if filter_prod_mode is not None:
+                filters, _ = model.get_weights(0)
+                filters_product = utils.filters_product(filters, mode=filter_prod_mode)
+                loss += lam * filters_product
+
             loss.backward()
             optimizer.step()
 
