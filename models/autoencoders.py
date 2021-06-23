@@ -36,9 +36,9 @@ class Autoencoder(ABC, nn.Module):
         i = 0
         for child in itertools.chain(self._encoder.children(), self._decoder.children()):
             if isinstance(child, (nn.Conv2d, nn.Linear)):
-                i += 1
                 if i == depth:
                     return child.weight, child.bias
+                i += 1
 
         raise ValueError('Depth is too deep')
 

@@ -229,7 +229,7 @@ def plot_conv_autoencoder_reconstruction_error(autoencoder, dataloader, repr_dim
 
 @torch.no_grad()
 def plot_filters(model, title=None, output_shape=None, cmap='Greys', show=True, normalize=False):
-    filter_matrix = model.get_weights(1)[0].cpu().numpy()
+    filter_matrix = model.get_weights(0)[0].cpu().numpy()
     shape = filter_matrix.shape
     channels = shape[1]
 
