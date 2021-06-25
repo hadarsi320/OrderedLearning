@@ -46,7 +46,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             loss = loss_function(prediction, X)
             if filter_prod_mode is not None:
                 filters, _ = model.get_weights(0)
-                filters_product = utils.filters_product(filters, mode=filter_prod_mode)
+                filters_product = utils.filter_correlation(filters, mode=filter_prod_mode)
                 loss += lam * filters_product
 
             loss.backward()
@@ -147,8 +147,8 @@ def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_l
                              model.get_dropout_dim(), iteration=iteration)
 
     weights, _ = model.get_weights(0)
-    for mode in ['all pairs', 'serial', 'row col']:
-        logger.report_scalar('Filter Product', mode.title(), utils.filters_product(weights, mode),
+    for mode in ['hadamund', 'frobenius']:
+        logger.report_scalar('Filter Product', mode.title(), utils.filter_correlation(weights, mode),
                              iteration=iteration)
 
 
