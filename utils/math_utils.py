@@ -71,7 +71,7 @@ def filter_correlation(weights: torch.Tensor, mode: str = 'all pairs') -> torch.
         product = weights @ weights.squeeze().transpose(1, 2)
         for i in range(product.shape[0]):
             product[i, i] = 0
-        product_sum = sum(matrix.sum().pow(2) for row in product for matrix in row)
+        product_sum = product.sum((-2, -1)).pow(2).sum()
 
     else:
         raise ValueError('Illegal mode given, must be "frobenius" or "hadamund"')
