@@ -6,23 +6,28 @@ import utils
 
 
 def rgb_to_ycbcr(image: torch.Tensor) -> torch.Tensor:
-    if not isinstance(image, torch.Tensor):
-        raise TypeError("Input type is not a torch.Tensor. Got {}".format(
-            type(image)))
+    rgb_image = F.to_pil_image(image, mode='RGB')
+    ycbcr_image = rgb_image.convert('YCbCr')
+    ycbcr_tensor = F.to_tensor(ycbcr_image)
+    return ycbcr_tensor
 
-    if len(image.shape) < 3 or image.shape[-3] != 3:
-        raise ValueError("Input size must have a shape of (*, 3, H, W). Got {}"
-                         .format(image.shape))
-
-    r: torch.Tensor = image[..., 0, :, :]
-    g: torch.Tensor = image[..., 1, :, :]
-    b: torch.Tensor = image[..., 2, :, :]
-
-    delta: float = 0.5
-    y: torch.Tensor = 0.299 * r + 0.587 * g + 0.114 * b
-    cb: torch.Tensor = (b - y) * 0.564 + delta
-    cr: torch.Tensor = (r - y) * 0.713 + delta
-    return torch.stack([y, cb, cr], -3)
+    # if not isinstance(image, torch.Tensor):
+    #     raise TypeError("Input type is not a torch.Tensor. Got {}".format(
+    #         type(image)))
+    #
+    # if len(image.shape) < 3 or image.shape[-3] != 3:
+    #     raise ValueError("Input size must have a shape of (*, 3, H, W). Got {}"
+    #                      .format(image.shape))
+    #
+    # r: torch.Tensor = image[..., 0, :, :]
+    # g: torch.Tensor = image[..., 1, :, :]
+    # b: torch.Tensor = image[..., 2, :, :]
+    #
+    # delta: float = 0.5
+    # y: torch.Tensor = 0.299 * r + 0.587 * g + 0.114 * b
+    # cb: torch.Tensor = (b - y) * 0.564 + delta
+    # cr: torch.Tensor = (r - y) * 0.713 + delta
+    # return torch.stack([y, cb, cr], -3)
 
 
 def ycbcr_to_rgb(image: torch.Tensor) -> torch.Tensor:
