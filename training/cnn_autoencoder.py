@@ -31,9 +31,11 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     best_loss = float('inf')
     plateau = 0
     train_time = 0
-    for epoch in range(epochs):
-        learning_rate = utils.get_learning_rate(optimizer)
 
+    if logger is not None:
+        report(logger, model, optimizer, lr_scheduler, epoch=0, train_loss=None)
+
+    for epoch in range(epochs):
         epoch_start = time.time()
         print(f'\tEpoch {epoch + 1}/{epochs}')
 
@@ -105,7 +107,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             plateau += 1
 
         if logger is not None:
-            report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, epoch_loss, eval_loss=eval_loss)
+            report(logger, model, optimizer, lr_scheduler, epoch + 1, epoch_loss, eval_loss=eval_loss)
 
         if (plateau == plateau_limit) or model.has_converged():
             break
@@ -120,36 +122,37 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     utils.update_save(f'{model_dir}/model', end=end)
 
 
-def report(logger, model, optimizer, lr_scheduler, learning_rate, epoch, train_loss, eval_loss=None):
-    iteration = epoch + 1
-    logger.report_scalar('Model Loss', 'Train Loss', train_loss, iteration=iteration)
-    if eval_loss is not None:
-        logger.report_scalar('Model Loss', 'Eval Loss', eval_loss, iteration=iteration)
+def report(logger, model, optimizer, lr_scheduler, epoch, train_loss, eval_loss=None):
+    if epoch > 0:
+        logger.report_scalar('Model Loss', 'Train Loss', train_loss, iteration=epoch)
+        if eval_loss is not None:
+            logger.report_scalar('Model Loss', 'Eval Loss', eval_loss, iteration=epoch)
+
+        if model.apply_nested_dropout:
+            logger.report_scalar('Nested Dropout', 'Converged Unit',
+                                 model.get_converged_unit(), iteration=epoch)
+            logger.report_scalar('Nested Dropout', 'Dropout Dimension',
+                                 model.get_dropout_dim(), iteration=epoch)
 
     model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=True)
-    logger.report_matplotlib_figure('Model Filters Normalized', 'Filters', figure=plt, iteration=iteration,
+    logger.report_matplotlib_figure('Model Filters Normalized', 'Filters', figure=plt, iteration=epoch,
                                     report_image=True)
     plt.close()
 
     model_visualizations.plot_filters(model, output_shape=(8, 8), show=False, normalize=False)
-    logger.report_matplotlib_figure('Model Filters Unnormalized', 'Filters', figure=plt, iteration=iteration,
+    logger.report_matplotlib_figure('Model Filters Unnormalized', 'Filters', figure=plt, iteration=epoch,
                                     report_image=True)
     plt.close()
     if lr_scheduler is not None:
-        logger.report_scalar('Learning Rate', 'Current', learning_rate,
-                             iteration=iteration)
+        logger.report_scalar('Learning Rate', 'Current', utils.get_learning_rate(optimizer),
+                             iteration=epoch)
         logger.report_scalar('Learning Rate', 'Initial', optimizer.defaults['lr'],
-                             iteration=iteration)
-    if model.apply_nested_dropout:
-        logger.report_scalar('Nested Dropout', 'Converged Unit',
-                             model.get_converged_unit(), iteration=iteration)
-        logger.report_scalar('Nested Dropout', 'Dropout Dimension',
-                             model.get_dropout_dim(), iteration=iteration)
+                             iteration=epoch)
 
     weights, _ = model.get_weights(0)
     for mode in ['hadamund', 'frobenius']:
         logger.report_scalar('Filter Product', mode.title(), utils.filter_correlation(weights, mode),
-                             iteration=iteration)
+                             iteration=epoch)
 
 
 def train_cae(cfg: dict, task: Task = None):
