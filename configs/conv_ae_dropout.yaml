@@ -2,20 +2,20 @@ data:
   dataset: imagenette
   kwargs:
     normalize: True
-    batch_size: 64  # important
+    batch_size: 8 # important
     image_mode: Y
     random_flip: True
 model:
   mode: F
-  activation: Mish
+  activation: ReLU
   batch_norm: False
 nested_dropout:
   apply_nested_dropout: True # important
   optimize_dropout: True
-  freeze_gradients: True
+  freeze_gradients: False
   p: 0.1
-  sequence_bound: 64
-  tol: 1.e-5
+  sequence_bound:
+  tol:
 optim:
   optimizer: Ranger
   optimizer_kwargs:
@@ -28,4 +28,6 @@ optim:
 train:
   loss_criterion: MSELoss
   epochs: 50
-  plateau_limit: None
+  plateau_limit:
+  lam:
+  filter_prod_mode:
