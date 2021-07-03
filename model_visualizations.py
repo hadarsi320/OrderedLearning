@@ -213,18 +213,14 @@ def plot_conv_autoencoder_reconstruction_error(autoencoder, dataloader, repr_dim
     nested_dropout_losses = get_reconstruction_error(autoencoder, dataloader, repr_dim, device)
 
     # Plotting
-    indices = [int(2 ** i) for i in torch.arange(math.log2(repr_dim) + 1)]
-
-    for i in range(2):
-        plt.plot(range(1, repr_dim + 1), nested_dropout_losses)
-        plt.xlabel('Representation Channels')
-        plt.ylabel('Reconstruction Error')
-        plt.xticks(indices)
-        plt.title('Error by Channels')
-        plt.yscale(scale)
-        plt.tight_layout()
-        if show:
-            plt.show()
+    plt.plot(range(1, repr_dim + 1), nested_dropout_losses)
+    plt.xlabel('Representation Channels')
+    plt.ylabel('Reconstruction Error')
+    plt.title('Error by Channels')
+    plt.yscale(scale)
+    plt.tight_layout()
+    if show:
+        plt.show()
 
 
 @torch.no_grad()
