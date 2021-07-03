@@ -74,18 +74,18 @@ def train(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, 
         has_improved = False
         if testloader is not None:
             model.eval()
-            eval_accuracy = round(utils.get_model_accuracy(model, testloader, device), 3)
+            val_accuracy = round(utils.get_model_accuracy(model, testloader, device), 3)
             model.train()
-            accuracies.append(eval_accuracy)
-            print(f'\tEvaluation accuracy {eval_accuracy}')
+            accuracies.append(val_accuracy)
+            print(f'\tValuation accuracy {val_accuracy}')
 
-            if eval_accuracy > best_accuracy:
-                best_accuracy = eval_accuracy
+            if val_accuracy > best_accuracy:
+                best_accuracy = val_accuracy
                 has_improved = True
                 model_save_kwargs.update(accuracies=accuracies, best_accuracy=best_accuracy)
 
             if lr_scheduler is not None:
-                lr_scheduler.step(eval_accuracy)
+                lr_scheduler.step(val_accuracy)
 
         elif epoch_loss < best_loss:
             best_loss = epoch_loss
