@@ -196,16 +196,13 @@ def train_cae(cfg: dict, task: Task = None):
         model_visualizations.plot_images_by_channels(model, data_module,
                                                      normalized=cfg['data']['kwargs']['normalize'],
                                                      im_format='Y', show=False)
-        logger.report_matplotlib_figure('Images by Num Channels', 'Images', figure=plt,
-                                        report_image=False)
+        logger.report_matplotlib_figure('Images by Num Channels', 'Images', figure=plt)
         plt.close()
 
         model_visualizations.plot_conv_autoencoder_reconstruction_error(model, train_dataloader, show=False)
-        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Train Error', figure=plt,
-                                        report_image=False)
+        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Train Error', figure=plt)
         plt.close()
 
         model_visualizations.plot_conv_autoencoder_reconstruction_error(model, eval_dataloader, show=False)
-        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Evaluation Error', figure=plt,
-                                        report_image=False)
+        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Evaluation Error', figure=plt)
         plt.close()
