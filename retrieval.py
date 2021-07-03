@@ -37,7 +37,7 @@ def evaluate_retrieval_method(data_repr: torch.Tensor, retrieval_method, code_le
         # for sample in tqdm(samples, desc=f'Code length {i}'):
         for sample in samples:
             start = time()
-            retrieval_method(sample, i )
+            retrieval_method(sample, i)
             _times.append(time() - start)
         times[i] = np.average(_times)
     return times
@@ -60,7 +60,6 @@ def test_retrieval_times():
     #       binary tree retrieval
     def tree_search_i(sample, i):
         return binary_tree.search_tree(list(sample)[:i], max_depth=i)
-
 
     tree_search_times = evaluate_retrieval_method(binarized_repr, tree_search_i, repr_dim)
     pickle.dump(tree_search_times, open(f'pickles/or_retrieval_times_{current_time}.pkl', 'wb'))
