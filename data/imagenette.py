@@ -8,7 +8,7 @@ from data.constants import IMAGENETTE_Y_MEAN, IMAGENETTE_Y_STD
 
 
 def get_dataloader(train=True, batch_size=1, normalize=True, image_mode='Y', random_flip=False):
-    data_dir = utils.imagenette_train_dir if train else utils.imagenette_eval_dir
+    data_dir = utils.imagenette_train_dir if train else utils.imagenette_val_dir
 
     transform_list = []
     if image_mode in ['Y', 'YCbCr']:
