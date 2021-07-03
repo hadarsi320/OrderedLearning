@@ -18,7 +18,7 @@ from models.autoencoders import ConvAutoencoder
 
 def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int, loss_criterion: str,
           model_dir: str, plateau_limit: int, config: dict, lam: float = 1e-3, filter_prod_mode: str = None,
-          lr_scheduler=None, logger: Logger = None, eval_dataloader: DataLoader = None):
+          lr_scheduler=None, logger: Logger = None, val_dataloader: DataLoader = None):
     # TODO After making sure unoptimized nested dropout works, use only the fact that it is optimized for prints
     print(f'The model has {utils.get_num_parameters(model):,} parameters')
     loss_function = getattr(nn, loss_criterion)()
@@ -63,19 +63,19 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         epoch_loss = utils.format_number(np.average(batch_losses))
         losses.append(epoch_loss)
 
-        if eval_dataloader is None:
-            eval_loss = None
+        if val_dataloader is None:
+            val_loss = None
         else:
-            eval_loss = utils.format_number(utils.get_model_loss(model, eval_dataloader,
-                                                                 loss_function=lambda x, y, res: F.mse_loss(res, x),
-                                                                 device=device, show_progress=False))
+            val_loss = utils.format_number(utils.get_model_loss(model, val_dataloader,
+                                                                loss_function=lambda x, y, res: F.mse_loss(res, x),
+                                                                device=device, show_progress=False))
 
         epoch_time = time.time() - epoch_start
         train_time += epoch_time
 
         print(f'Train loss {epoch_loss}')
-        if eval_loss is not None:
-            print(f'Eval loss {eval_loss}')
+        if val_loss is not None:
+            print(f'Validation loss {val_loss}')
         if model.apply_nested_dropout:
             print(f'{model.get_converged_unit()}/{model.get_dropout_dim()} converged units')
         print(f'Epoch time {utils.format_time(epoch_time)}\n')
@@ -107,7 +107,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             plateau += 1
 
         if logger is not None:
-            report(logger, model, optimizer, lr_scheduler, epoch + 1, epoch_loss, eval_loss=eval_loss)
+            report(logger, model, optimizer, lr_scheduler, epoch + 1, epoch_loss, val_loss=val_loss)
 
         if (plateau == plateau_limit) or model.has_converged():
             break
@@ -122,11 +122,11 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
     utils.update_save(f'{model_dir}/model', end=end)
 
 
-def report(logger, model, optimizer, lr_scheduler, epoch, train_loss, eval_loss=None):
+def report(logger, model, optimizer, lr_scheduler, epoch, train_loss, val_loss=None):
     if epoch > 0:
         logger.report_scalar('Model Loss', 'Train Loss', train_loss, iteration=epoch)
-        if eval_loss is not None:
-            logger.report_scalar('Model Loss', 'Eval Loss', eval_loss, iteration=epoch)
+        if val_loss is not None:
+            logger.report_scalar('Model Loss', 'Validation Loss', val_loss, iteration=epoch)
 
         if model.apply_nested_dropout:
             logger.report_scalar('Nested Dropout', 'Converged Unit',
@@ -165,7 +165,7 @@ def train_cae(cfg: dict, task: Task = None):
         optimizer_model = getattr(optim, cfg['optim']['optimizer'])
 
     train_dataloader = data_module.get_dataloader(**cfg['data']['kwargs'], train=True)
-    eval_dataloader = data_module.get_dataloader(**cfg['data']['kwargs'], train=False)
+    val_dataloader = data_module.get_dataloader(**cfg['data']['kwargs'], train=False)
     model = ConvAutoencoder(**cfg['model'], **cfg['nested_dropout'], **cfg['data']['kwargs'])
     optimizer = optimizer_model(params=model.parameters(), **cfg['optim']['optimizer_kwargs'])
 
@@ -189,7 +189,7 @@ def train_cae(cfg: dict, task: Task = None):
         logger = None
 
     train(model, optimizer, train_dataloader, model_dir=model_dir, config=cfg, lr_scheduler=lr_scheduler, logger=logger,
-          **cfg['train'], eval_dataloader=eval_dataloader)
+          **cfg['train'], val_dataloader=val_dataloader)
 
     if logger is not None:
         model.eval()
@@ -203,6 +203,6 @@ def train_cae(cfg: dict, task: Task = None):
         logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Train Error', figure=plt)
         plt.close()
 
-        model_visualizations.plot_conv_autoencoder_reconstruction_error(model, eval_dataloader, show=False)
-        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Evaluation Error', figure=plt)
+        model_visualizations.plot_conv_autoencoder_reconstruction_error(model, val_dataloader, show=False)
+        logger.report_matplotlib_figure('Reconstruction Error by Channels', 'Validation Error', figure=plt)
         plt.close()
