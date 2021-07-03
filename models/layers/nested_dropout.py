@@ -23,6 +23,8 @@ class NestedDropout(nn.Module):
             self._sequence_bound = sequence_bound
             self._old_repr = None
 
+        print('Alert: Nested Dropout is being used')
+
     def forward(self, x):
         if self._dropout_dim is None:
             self._dropout_dim = x.shape[1]
