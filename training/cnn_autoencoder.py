@@ -60,22 +60,22 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                 if model.has_converged():
                     break
 
-        epoch_loss = utils.format_number(np.average(batch_losses))
+        epoch_loss = np.average(batch_losses)
         losses.append(epoch_loss)
 
         if val_dataloader is None:
             val_loss = None
         else:
-            val_loss = utils.format_number(utils.get_model_loss(model, val_dataloader,
-                                                                loss_function=lambda x, y, res: F.mse_loss(res, x),
-                                                                device=device, show_progress=False))
+            val_loss = utils.get_model_loss(model, val_dataloader,
+                                            loss_function=lambda x, y, res: F.mse_loss(res, x),
+                                            device=device, show_progress=False)
 
         epoch_time = time.time() - epoch_start
         train_time += epoch_time
 
-        print(f'Train loss {epoch_loss}')
+        print(f'Train loss {epoch_loss:.3e}')
         if val_loss is not None:
-            print(f'Validation loss {val_loss}')
+            print(f'Validation loss {val_loss:.3e}')
         if model.apply_nested_dropout:
             print(f'{model.get_converged_unit()}/{model.get_dropout_dim()} converged units')
         print(f'Epoch time {utils.format_time(epoch_time)}\n')
