@@ -48,7 +48,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             loss = loss_function(prediction, X)
             if filter_prod_mode is not None:
                 filters, _ = model.get_weights(0)
-                filters_product = utils.filter_correlation(filters, mode=filter_prod_mode)
+                filters_product = utils.filter_correlation(filters)
                 loss += lam * filters_product
 
             loss.backward()
@@ -150,9 +150,8 @@ def report(logger, model, optimizer, lr_scheduler, epoch, train_loss, val_loss=N
                              iteration=epoch)
 
     weights, _ = model.get_weights(0)
-    for mode in ['hadamund', 'frobenius']:
-        logger.report_scalar('Filter Product', mode.title(), utils.filter_correlation(weights, mode),
-                             iteration=epoch)
+    logger.report_scalar('Filter Correlation', 'Value', utils.filter_correlation(weights),
+                         iteration=epoch)
 
 
 def train_cae(cfg: dict, task: Task = None):

@@ -26,16 +26,15 @@ def square_shape(x, y):
     return div, total // div
 
 
-def filter_correlation(weights: torch.Tensor, mode: str = 'all pairs') -> torch.Tensor:
+def filter_correlation(weights: torch.Tensor) -> torch.Tensor:
     """
     Parameters
     ----------
-    weights The weights of a convolutional layer with input dim of 1
-    mode The mode of product to compute
+    weights: The weights of a convolutional layer (with input dim of 1)
 
     Returns
     -------
-    The correlation between the filters (products)
+    The correlation between the filters
     """
     if weights.shape[1] != 1:
         raise NotImplementedError('Filter products only implemented for convolutions with input dim 1')
@@ -60,22 +59,26 @@ def filter_correlation(weights: torch.Tensor, mode: str = 'all pairs') -> torch.
     #         product_sum += row_prod.pow(2).sum()
     #         product_sum += col_prod.pow(2).sum()
     #     product_sum = product_sum.sqrt()
+    #
+    # elif mode == 'hadamund':
+    #     product = weights * weights.squeeze()
+    #     for i in range(product.shape[0]):
+    #         product[i, i] = 0
+    #     product_sum = product.sum((-2, -1)).pow(2).sum()
+    #
+    # elif mode == 'frobenius':
+    #     product = weights @ weights.squeeze().transpose(1, 2)
+    #     for i in range(product.shape[0]):
+    #         product[i, i] = 0
+    #     product_sum = torch.diagonal(product, dim1=-2, dim2=-1).sum(-1).pow(2).sum()
+    #
+    # else:
+    #     raise ValueError('Illegal mode given, must be "frobenius" or "hadamund"')
 
-    elif mode == 'hadamund':
-        product = weights * weights.squeeze()
-        for i in range(product.shape[0]):
-            product[i, i] = 0
-        product_sum = product.sum().pow(2)
-
-    elif mode == 'frobenius':
-        product = weights @ weights.squeeze().transpose(1, 2)
-        for i in range(product.shape[0]):
-            product[i, i] = 0
-        product_sum = product.sum((-2, -1)).pow(2).sum()
-
-    else:
-        raise ValueError('Illegal mode given, must be "frobenius" or "hadamund"')
-
+    product = weights * weights.squeeze()
+    for i in range(product.shape[0]):
+        product[i, i] = 0
+    product_sum = product.sum((-2, -1)).pow(2).sum()
     return product_sum
 
 
