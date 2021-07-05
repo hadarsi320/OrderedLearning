@@ -16,9 +16,9 @@ import utils
 from models.autoencoders import ConvAutoencoder
 
 
-def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int, loss_criterion: str,
-          model_dir: str, plateau_limit: int, config: dict, lam: float = 1e-3, filter_prod_mode: str = None,
-          lr_scheduler=None, logger: Logger = None, val_dataloader: DataLoader = None):
+def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLoader,
+          epochs: int, loss_criterion: str, model_dir: str, plateau_limit: int, config: dict,
+          lam: float = None, lr_scheduler=None, logger: Logger = None, val_dataloader: DataLoader = None):
     # TODO After making sure unoptimized nested dropout works, use only the fact that it is optimized for prints
     print(f'The model has {utils.get_num_parameters(model):,} parameters')
     loss_function = getattr(nn, loss_criterion)()
@@ -46,7 +46,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             prediction = model(X)
 
             loss = loss_function(prediction, X)
-            if filter_prod_mode is not None:
+            if lam is not None:
                 filters, _ = model.get_weights(0)
                 filters_product = utils.filter_correlation(filters)
                 loss += lam * filters_product
@@ -60,20 +60,20 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
                 if model.has_converged():
                     break
 
-        epoch_loss = np.average(batch_losses)
-        losses.append(epoch_loss)
+        train_loss = utils.format_number(np.average(batch_losses))
+        losses.append(train_loss)
 
-        if val_dataloader is None:
-            val_loss = None
-        else:
-            val_loss = utils.get_model_loss(model, val_dataloader,
-                                            loss_function=lambda x, y, res: F.mse_loss(res, x),
-                                            device=device, show_progress=False)
+        val_loss = None
+        if val_dataloader is not None:
+            val_loss = utils.format_number(
+                utils.get_model_loss(model, val_dataloader,
+                                     loss_function=lambda x, y, res: F.mse_loss(res, x),
+                                     device=device, show_progress=False))
 
         epoch_time = time.time() - epoch_start
         train_time += epoch_time
 
-        print(f'Train loss {epoch_loss:.3e}')
+        print(f'Train loss {train_loss:.3e}')
         if val_loss is not None:
             print(f'Validation loss {val_loss:.3e}')
         if model.apply_nested_dropout:
@@ -83,8 +83,8 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         model_save_dict = config.copy()
         model_save_dict['performance'] = dict(epoch=epoch, train_time=utils.format_time(train_time), losses=losses)
         has_improved = False
-        if epoch_loss < best_loss:
-            best_loss = epoch_loss
+        if train_loss < best_loss:
+            best_loss = train_loss
             has_improved = True
             model_save_dict['performance']['best_loss'] = best_loss
 
@@ -95,7 +95,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
         # if lr_scheduler is not None and (model.apply_nested_dropout and model.has_converged()):
         if lr_scheduler is not None:
             if type(lr_scheduler) == optim.lr_scheduler.ReduceLROnPlateau:
-                lr_scheduler.step(epoch_loss)
+                lr_scheduler.step(train_loss)
             else:
                 lr_scheduler.step()
 
@@ -107,7 +107,7 @@ def train(model: ConvAutoencoder, optimizer: optim.Optimizer, dataloader: DataLo
             plateau += 1
 
         if logger is not None:
-            report(logger, model, optimizer, lr_scheduler, epoch + 1, epoch_loss, val_loss=val_loss)
+            report(logger, model, optimizer, lr_scheduler, epoch + 1, train_loss, val_loss=val_loss)
 
         if (plateau == plateau_limit) or model.has_converged():
             break
